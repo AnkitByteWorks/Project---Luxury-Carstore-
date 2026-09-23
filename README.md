@@ -28,7 +28,7 @@ A production-grade REST API for buying luxury cars. Built with **Spring Boot 4**
 ### Option 1: Docker (Recommended)
 
 ```bash
-git clone https://github.com/ankit68015631/carstore.git
+git clone https://github.com/AnkitByteWorks/carstore.git
 cd carstore
 docker-compose up -d
 
