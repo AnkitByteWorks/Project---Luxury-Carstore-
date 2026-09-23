@@ -45,13 +45,25 @@ jobs:
 
       # ─── 6. Run tests ───
       - name: Run tests
-        run: mvn test -B
+        run: mvn test -B -Dspring.profiles.active=test
 
-      # ─── 7. Package JAR ───
+      # ─── 7. Print test reports on failure ───
+      - name: Print test reports on failure
+        if: failure()
+        run: |
+          echo "=================== SUREFIRE TEST REPORTS ==================="
+          for file in target/surefire-reports/*.txt; do
+            if [ -f "$file" ]; then
+              echo "--- $file ---"
+              cat "$file"
+            fi
+          done
+
+      # ─── 8. Package JAR ───
       - name: Package
         run: mvn package -DskipTests -B
 
-      # ─── 8. Upload test reports (even on failure) ───
+      # ─── 9. Upload test reports (even on failure) ───
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,7 +71,7 @@ jobs:
           name: test-reports
           path: target/surefire-reports/
 
-      # ─── 9. Upload JAR artifact ───
+      # ─── 10. Upload JAR artifact ───
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
