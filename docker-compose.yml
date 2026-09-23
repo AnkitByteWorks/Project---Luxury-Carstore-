@@ -1,0 +1,63 @@
+
+  services:
+
+    # ═══════════════════════════════════════════
+    #  MySQL 8
+    # ═══════════════════════════════════════════
+    mysql:
+      image: mysql:8.0
+      container_name: carstore-mysql
+      restart: unless-stopped
+      environment:
+        MYSQL_ROOT_PASSWORD: rootpass
+        MYSQL_DATABASE: luxury_cars_db
+        MYSQL_USER: carstore_user
+        MYSQL_PASSWORD: carstore_pass
+      ports:
+        - "3307:3306"     # host port 3307 (avoid local MySQL conflict)
+      volumes:
+        - mysql_data:/var/lib/mysql
+      healthcheck:
+        test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass" ]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 30s
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
+    #  Spring Boot App (Java 25)
+    # ═══════════════════════════════════════════
+    carstore-app:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: carstore-app
+      restart: unless-stopped
+      depends_on:
+        mysql:
+          condition: service_healthy
+      environment:
+        SPRING_PROFILES_ACTIVE: prod
+        DB_URL: jdbc:mysql://mysql:3306/luxury_cars_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+        DB_USERNAME: carstore_user
+        DB_PASSWORD: carstore_pass
+        JWT_SECRET: ThisIsAVeryLongSecretKeyForJwtSigningMustBeAtLeast32BytesLongForHS256!
+        JWT_EXPIRATION: 86400000
+        UPLOAD_DIR: /app/uploads/cars
+        PORT: 8080
+      ports:
+        - "8080:8080"
+      volumes:
+        - uploads_data:/app/uploads/cars
+      networks:
+        - carstore-network
+
+  volumes:
+    mysql_data:
+    uploads_data:
+
+  networks:
+    carstore-network:
+      driver: bridge
