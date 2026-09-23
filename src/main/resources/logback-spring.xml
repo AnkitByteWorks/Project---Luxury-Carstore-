@@ -73,4 +73,11 @@
         </root>
     </springProfile>
 
+    <!-- TEST profile: console logging for CI/CD and tests -->
+    <springProfile name="test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+
 </configuration>

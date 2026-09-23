@@ -42,7 +42,7 @@ import com.Luxurycars.carstore.config.CacheConfig;
         )
 )
 @Import({SecurityConfig.class, JwtAuthFilter.class, CacheConfig.class})
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 class CarControllerTest {
 
     @Autowired
