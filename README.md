@@ -22,7 +22,7 @@ A production-grade REST API for buying luxury cars. Built with **Spring Boot 4**
 
 ```bash
 # Clone
-git clone https://github.com/<your-username>/carstore.git
+git clone https://github.com/<AnkitByteWorks>/carstore.git
 cd carstore
 
 # Start everything
