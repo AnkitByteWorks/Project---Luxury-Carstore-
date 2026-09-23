@@ -58,3 +58,11 @@ uploads/
 logs/
 *.log
 *.log.gz
+
+target/
+.idea/
+*.iml
+logs/
+uploads/
+.env
+application-local.properties
