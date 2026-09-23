@@ -4,7 +4,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
+    groups:
+      jjwt:
+        patterns:
+          - "io.jsonwebtoken:*"
+      spring-framework:
+        patterns:
+          - "org.springframework*:*"
 
   - package-ecosystem: "docker"
     directory: "/"
