@@ -20,6 +20,9 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 
+# Ensure Docker container runs in prod profile by default
+ENV SPRING_PROFILES_ACTIVE=prod
+
 # Create directory for file uploads
 RUN mkdir -p /app/uploads/cars
 
