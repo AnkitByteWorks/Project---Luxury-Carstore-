@@ -32,3 +32,17 @@ git clone https://github.com/AnkitByteWorks/carstore.git
 cd carstore
 docker-compose up -d
 
+## 🌐 Live Demo
+
+**API is deployed and live on Railway!**
+
+- **API Base:** https://project-luxury-carstore-production.up.railway.app
+- **Swagger UI:** https://project-luxury-carstore-production.up.railway.app/swagger-ui.html
+- **Sample Response:** https://project-luxury-carstore-production.up.railway.app/api/cars
+
+### 🔐 Admin Credentials (for testing)
+- Username: `admin`
+- Password: `admin123`
+
+⚠️ **Free Tier Note:** First request might take 5-10 seconds (cold start).
+
