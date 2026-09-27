@@ -12,9 +12,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.Luxurycars.carstore.dto.RefreshTokenRequestDTO;
+import com.Luxurycars.carstore.dto.TokenRefreshResponseDTO;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Authentication", description = "Register and login")
+@Tag(name = "Authentication", description = "Register, login, token refresh, and logout")
 public class AuthController {
 
     private final AuthService authService;
@@ -31,10 +35,25 @@ public class AuthController {
         return new ResponseEntity<>(authService.register(dto), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Login and get a JWT token")
+    @Operation(summary = "Login and get a JWT token + Refresh Token")
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(
             @Valid @RequestBody LoginRequestDTO dto) {
         return ResponseEntity.ok(authService.login(dto));
+    }
+
+    @Operation(summary = "Rotate refresh token and issue new access token")
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenRefreshResponseDTO> refreshToken(
+            @Valid @RequestBody RefreshTokenRequestDTO dto) {
+        return ResponseEntity.ok(authService.refreshToken(dto));
+    }
+
+    @Operation(summary = "Logout and revoke refresh token")
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(
+            @Valid @RequestBody RefreshTokenRequestDTO dto) {
+        authService.logout(dto);
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 }

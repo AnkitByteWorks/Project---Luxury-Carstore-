@@ -27,11 +27,19 @@ public class TestDriveService {
 
     private final TestDriveRepository testDriveRepository;
     private final CarRepository carRepository;
+    private final EmailNotificationService emailNotificationService;
 
     @Autowired
-    public TestDriveService(TestDriveRepository testDriveRepository, CarRepository carRepository) {
+    public TestDriveService(TestDriveRepository testDriveRepository,
+                            CarRepository carRepository,
+                            @Autowired(required = false) EmailNotificationService emailNotificationService) {
         this.testDriveRepository = testDriveRepository;
         this.carRepository = carRepository;
+        this.emailNotificationService = emailNotificationService;
+    }
+
+    public TestDriveService(TestDriveRepository testDriveRepository, CarRepository carRepository) {
+        this(testDriveRepository, carRepository, null);
     }
 
     @Transactional
@@ -59,7 +67,13 @@ public class TestDriveService {
         TestDrive saved = testDriveRepository.save(testDrive);
         log.info("VIP test drive booked successfully with reference: {}", referenceCode);
 
-        return toResponseDTO(saved, car);
+        TestDriveResponseDTO responseDTO = toResponseDTO(saved, car);
+
+        if (emailNotificationService != null) {
+            emailNotificationService.sendTestDriveConfirmationEmail(responseDTO);
+        }
+
+        return responseDTO;
     }
 
     @Transactional(readOnly = true)

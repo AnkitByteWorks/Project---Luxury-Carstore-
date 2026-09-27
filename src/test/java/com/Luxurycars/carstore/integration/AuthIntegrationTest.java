@@ -37,6 +37,9 @@ class AuthIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private com.Luxurycars.carstore.repository.RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String baseUrl() {
@@ -45,6 +48,7 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
     }
 

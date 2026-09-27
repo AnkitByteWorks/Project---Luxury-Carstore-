@@ -17,6 +17,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.Luxurycars.carstore.dto.RefreshTokenRequestDTO;
+import com.Luxurycars.carstore.dto.TokenRefreshResponseDTO;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,16 +29,26 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     @Autowired
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       @Autowired(required = false) RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.refreshTokenService = refreshTokenService;
+    }
+
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService,
+                       AuthenticationManager authenticationManager) {
+        this(userRepository, passwordEncoder, jwtService, authenticationManager, null);
     }
 
     // ─── REGISTER ───
@@ -87,13 +99,32 @@ public class AuthService {
         return buildAuthResponse(token, user);
     }
 
+    public TokenRefreshResponseDTO refreshToken(RefreshTokenRequestDTO dto) {
+        if (refreshTokenService == null) {
+            throw new BadRequestException("Refresh token service is currently unavailable");
+        }
+        return refreshTokenService.rotateRefreshToken(dto.getRefreshToken());
+    }
+
+    public void logout(RefreshTokenRequestDTO dto) {
+        if (refreshTokenService != null && dto != null && dto.getRefreshToken() != null) {
+            refreshTokenService.revokeToken(dto.getRefreshToken());
+        }
+    }
+
     private AuthResponseDTO buildAuthResponse(String token, AppUser user) {
         Set<String> roles = user.getRoles().stream()
                 .map(Enum::name)
                 .collect(Collectors.toSet());
 
+        String refreshToken = null;
+        if (refreshTokenService != null) {
+            refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+        }
+
         return AuthResponseDTO.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .type("Bearer")
                 .userId(user.getId())
                 .username(user.getUsername())

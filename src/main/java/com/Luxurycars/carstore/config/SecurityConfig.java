@@ -111,8 +111,17 @@ public class SecurityConfig {
                         // Admin-only order/admin operations
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
+                        // Public — Actuator Health & Metrics
+                        .requestMatchers("/actuator/**").permitAll()
+
+                        // Public — Payment Webhook Callback
+                        .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
+
                         // Any logged-in user — order endpoints
                         .requestMatchers("/api/orders/**").authenticated()
+
+                        // Payment intent creation
+                        .requestMatchers("/api/payments/**").authenticated()
 
                         // Everything else needs authentication
                         .anyRequest().authenticated()

@@ -12,6 +12,7 @@ import java.util.Set;
 public class AuthResponseDTO {
 
     private String token;              // the JWT
+    private String refreshToken;       // the Refresh Token
     private String type = "Bearer";    // always "Bearer"
     private Long userId;
     private String username;

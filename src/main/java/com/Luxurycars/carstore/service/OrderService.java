@@ -28,18 +28,30 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CarRepository carRepository;
     private final OrderEventService orderEventService;
+    private final EmailNotificationService emailNotificationService;
+    private final InvoiceService invoiceService;
 
     @Autowired
     public OrderService(OrderRepository orderRepository,
                         CarRepository carRepository,
-                        @Autowired(required = false) OrderEventService orderEventService) {
+                        @Autowired(required = false) OrderEventService orderEventService,
+                        @Autowired(required = false) EmailNotificationService emailNotificationService,
+                        @Autowired(required = false) InvoiceService invoiceService) {
         this.orderRepository = orderRepository;
         this.carRepository = carRepository;
         this.orderEventService = orderEventService;
+        this.emailNotificationService = emailNotificationService;
+        this.invoiceService = invoiceService;
+    }
+
+    public OrderService(OrderRepository orderRepository,
+                        CarRepository carRepository,
+                        OrderEventService orderEventService) {
+        this(orderRepository, carRepository, orderEventService, null, null);
     }
 
     public OrderService(OrderRepository orderRepository, CarRepository carRepository) {
-        this(orderRepository, carRepository, null);
+        this(orderRepository, carRepository, null, null, null);
     }
 
     public OrderStatsDTO getStats() {
@@ -95,6 +107,18 @@ public class OrderService {
 
         // 4. Save & return DTO
         Order saved = orderRepository.save(order);
+
+        // 5. Asynchronously dispatch luxury email notification with PDF invoice attachment
+        if (emailNotificationService != null) {
+            byte[] invoicePdf = null;
+            if (invoiceService != null) {
+                try {
+                    invoicePdf = invoiceService.generateInvoice(saved);
+                } catch (Exception ignored) {}
+            }
+            emailNotificationService.sendOrderConfirmationEmail(saved, invoicePdf);
+        }
+
         return OrderMapper.toResponseDTO(saved);
     }
 

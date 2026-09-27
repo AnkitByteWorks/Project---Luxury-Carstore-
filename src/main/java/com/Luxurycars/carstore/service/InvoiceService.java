@@ -58,6 +58,10 @@ public class InvoiceService {
 
         validateOwnership(order, authentication);
 
+        return generateInvoice(order);
+    }
+
+    public byte[] generateInvoice(Order order) {
         Car car = carRepository.findById(order.getCarId()).orElse(null);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -278,7 +282,7 @@ public class InvoiceService {
             document.close();
             return out.toByteArray();
         } catch (DocumentException e) {
-            log.error("Failed to generate PDF invoice for order {}: {}", orderId, e.getMessage(), e);
+            log.error("Failed to generate PDF invoice for order {}: {}", order.getId(), e.getMessage(), e);
             throw new RuntimeException("Failed to generate PDF invoice: " + e.getMessage(), e);
         }
     }
