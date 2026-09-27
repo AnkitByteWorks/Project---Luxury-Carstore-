@@ -31,18 +31,16 @@ A production-grade REST API for buying luxury cars. Built with **Spring Boot 4**
 git clone https://github.com/AnkitByteWorks/carstore.git
 cd carstore
 docker-compose up -d
+```
 
-## 🌐 Live Demo
+## 🌐 Full Stack Demo
 
-**API is deployed and live on Railway!**
-
-- **API Base:** https://project-luxury-carstore-production.up.railway.app
-- **Swagger UI:** https://project-luxury-carstore-production.up.railway.app/swagger-ui.html
-- **Sample Response:** https://project-luxury-carstore-production.up.railway.app/api/cars
+- **Frontend:** https://carstore-frontend.vercel.app
+- **Backend API:** https://project-luxury-carstore-production.up.railway.app
+- **API Docs:** https://project-luxury-carstore-production.up.railway.app/swagger-ui.html
 
 ### 🔐 Admin Credentials (for testing)
 - Username: `admin`
 - Password: `admin123`
 
 ⚠️ **Free Tier Note:** First request might take 5-10 seconds (cold start).
-
