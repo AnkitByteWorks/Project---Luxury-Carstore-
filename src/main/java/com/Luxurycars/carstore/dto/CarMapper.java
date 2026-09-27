@@ -18,13 +18,28 @@ public class CarMapper {
                 .showroomLocation(car.getShowroomLocation())
                 .deliveryDays(car.getDeliveryDays())
                 .paymentOptions(car.getPaymentOptions())
-                // Build the image URL, or null if no image
-                .imageUrl(car.getImagePath() != null ? "/api/cars/" + car.getId() + "/image" : null)
+                // Build the image URL (CDN/external URL or local API endpoint), or null if no image
+                .imageUrl(resolveImageUrl(car))
                 .imageName(car.getImageName())
-                .hasImage(car.getImagePath() != null)
+                .hasImage(resolveHasImage(car))
                 .createdAt(car.getCreatedAt())
                 .updatedAt(car.getUpdatedAt())
                 .build();
+    }
+
+    private static String resolveImageUrl(Car car) {
+        if (car.getImageUrl() != null && !car.getImageUrl().isBlank()) {
+            return car.getImageUrl();
+        }
+        if (car.getImagePath() != null && !car.getImagePath().isBlank()) {
+            return "/api/cars/" + car.getId() + "/image";
+        }
+        return null;
+    }
+
+    private static boolean resolveHasImage(Car car) {
+        return (car.getImageUrl() != null && !car.getImageUrl().isBlank())
+                || (car.getImagePath() != null && !car.getImagePath().isBlank());
     }
 
     // ─── RequestDTO → Entity (for POST/PUT) ───

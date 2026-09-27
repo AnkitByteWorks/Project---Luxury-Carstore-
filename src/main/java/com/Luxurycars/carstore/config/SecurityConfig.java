@@ -103,6 +103,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/cars/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/cars/**").hasRole("ADMIN")
 
+                        // VIP Test Drive Booking (Public creation + reference code check, admin management)
+                        .requestMatchers(HttpMethod.POST, "/api/test-drives").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/test-drives/ref/**").permitAll()
+                        .requestMatchers("/api/test-drives/**").hasRole("ADMIN")
+
+                        // Admin-only order/admin operations
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         // Any logged-in user — order endpoints
                         .requestMatchers("/api/orders/**").authenticated()
 

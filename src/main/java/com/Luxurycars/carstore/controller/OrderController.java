@@ -18,17 +18,30 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.Luxurycars.carstore.service.InvoiceService;
+import com.Luxurycars.carstore.service.OrderEventService;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 @RestController
 @RequestMapping("/api/orders")
-
-@Tag(name = "Orders", description = "Operations related to car orders")
+@Tag(name = "Orders", description = "Operations related to luxury car orders, tax invoices, and real-time live tracking")
 public class OrderController {
 
     private final OrderService orderService;
+    private final InvoiceService invoiceService;
+    private final OrderEventService orderEventService;
 
     @Autowired
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService,
+                           InvoiceService invoiceService,
+                           OrderEventService orderEventService) {
         this.orderService = orderService;
+        this.invoiceService = invoiceService;
+        this.orderEventService = orderEventService;
     }
 
     // ────────────────────────────────────────────────
@@ -143,5 +156,36 @@ public class OrderController {
         return ResponseEntity.ok(
                 orderService.cancelOrder(id)
         );
+    }
+
+    // ────────────────────────────────────────────────
+    // 9. OFFICIAL PDF TAX INVOICE GENERATION
+    // GET /api/orders/1/invoice
+    // ────────────────────────────────────────────────
+    @Operation(summary = "Download official PDF tax invoice", description = "Generates a luxury branded PDF tax invoice (Authorized for order owner or ADMIN)")
+    @GetMapping(value = "/{id}/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getInvoice(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        byte[] pdf = invoiceService.generateInvoicePdf(id, authentication);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline()
+                .filename("Carstore-Invoice-ORD-" + id + ".pdf")
+                .build());
+
+        return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+    }
+
+    // ────────────────────────────────────────────────
+    // 10. REAL-TIME ORDER STATUS SSE STREAM
+    // GET /api/orders/1/events
+    // ────────────────────────────────────────────────
+    @Operation(summary = "Subscribe to live order status SSE updates", description = "Server-Sent Events stream emitting live order status changes")
+    @GetMapping(value = "/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeToOrderEvents(@PathVariable Long id) {
+        return orderEventService.subscribe(id);
     }
 }

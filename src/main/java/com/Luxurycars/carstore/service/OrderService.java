@@ -27,11 +27,19 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CarRepository carRepository;
+    private final OrderEventService orderEventService;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, CarRepository carRepository) {
+    public OrderService(OrderRepository orderRepository,
+                        CarRepository carRepository,
+                        @Autowired(required = false) OrderEventService orderEventService) {
         this.orderRepository = orderRepository;
         this.carRepository = carRepository;
+        this.orderEventService = orderEventService;
+    }
+
+    public OrderService(OrderRepository orderRepository, CarRepository carRepository) {
+        this(orderRepository, carRepository, null);
     }
 
     public OrderStatsDTO getStats() {
@@ -125,7 +133,11 @@ public class OrderService {
         Order order = findOrderOrThrow(id);
         order.setStatus(newStatus);
         Order updated = orderRepository.save(order);
-        return OrderMapper.toResponseDTO(updated);
+        OrderResponseDTO responseDTO = OrderMapper.toResponseDTO(updated);
+        if (orderEventService != null) {
+            orderEventService.publishOrderEvent(id, responseDTO);
+        }
+        return responseDTO;
     }
 
     // ─── CANCEL ORDER ───
@@ -136,7 +148,11 @@ public class OrderService {
         }
         order.setStatus(OrderStatus.CANCELLED);
         Order updated = orderRepository.save(order);
-        return OrderMapper.toResponseDTO(updated);
+        OrderResponseDTO responseDTO = OrderMapper.toResponseDTO(updated);
+        if (orderEventService != null) {
+            orderEventService.publishOrderEvent(id, responseDTO);
+        }
+        return responseDTO;
     }
 
     // ─── HELPERS ───

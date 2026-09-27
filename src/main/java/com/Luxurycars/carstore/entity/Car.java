@@ -50,6 +50,9 @@ public class Car {
     private String paymentOptions;                    // e.g., "Cash,EMI,Card"
 
     // ─── IMAGE FIELDS ───
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
     @Column(name = "image_path", length = 500)
     private String imagePath;
 
