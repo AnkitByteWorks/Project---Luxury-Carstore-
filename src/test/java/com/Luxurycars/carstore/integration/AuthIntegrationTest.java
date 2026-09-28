@@ -42,12 +42,23 @@ class AuthIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
     private String baseUrl() {
         return "http://localhost:" + port + "/api/auth";
     }
 
     @BeforeEach
     void setUp() {
+        if (stringRedisTemplate != null) {
+            try {
+                java.util.Set<String> keys = stringRedisTemplate.keys("refresh_token:*");
+                if (keys != null && !keys.isEmpty()) {
+                    stringRedisTemplate.delete(keys);
+                }
+            } catch (Exception ignored) {}
+        }
         refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
     }

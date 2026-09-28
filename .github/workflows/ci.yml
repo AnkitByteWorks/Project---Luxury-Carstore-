@@ -11,6 +11,17 @@ jobs:
     name: Build & Test on Java 25
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       # ─── 1. Checkout ───
       - name: Checkout code
@@ -46,6 +57,9 @@ jobs:
       # ─── 6. Run tests ───
       - name: Run tests
         run: mvn test -B -Dspring.profiles.active=test
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
       # ─── 7. Print test reports on failure ───
       - name: Print test reports on failure
