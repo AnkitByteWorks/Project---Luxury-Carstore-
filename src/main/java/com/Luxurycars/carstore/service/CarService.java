@@ -136,33 +136,44 @@ public class CarService {
     public void incrementCarView(Long id) {
         log.debug("Incrementing view count in Redis for car ID: {}", id);
         if (stringRedisTemplate != null) {
-            stringRedisTemplate.opsForZSet().incrementScore("trending_cars", String.valueOf(id), 1);
+            try {
+                stringRedisTemplate.opsForZSet().incrementScore("trending_cars", String.valueOf(id), 1);
+            } catch (Exception e) {
+                log.warn("Could not increment car view in Redis: {}", e.getMessage());
+            }
         }
     }
 
     public List<CarResponseDTO> getTrendingCars() {
         log.debug("Fetching top trending cars from Redis ZSET");
         if (stringRedisTemplate == null) {
-            return java.util.Collections.emptyList();
+            return getFeaturedCars();
         }
 
-        Set<String> topCarIds = stringRedisTemplate.opsForZSet().reverseRange("trending_cars", 0, 4);
-        if (topCarIds == null || topCarIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+        try {
+            Set<String> topCarIds = stringRedisTemplate.opsForZSet().reverseRange("trending_cars", 0, 4);
+            if (topCarIds == null || topCarIds.isEmpty()) {
+                return getFeaturedCars();
+            }
+
+            List<Long> ids = topCarIds.stream()
+                    .map(Long::valueOf)
+                    .collect(Collectors.toList());
+
+            Map<Long, Car> carMap = carRepository.findAllById(ids).stream()
+                    .collect(Collectors.toMap(Car::getId, car -> car));
+
+            List<CarResponseDTO> trending = ids.stream()
+                    .map(carMap::get)
+                    .filter(Objects::nonNull)
+                    .map(CarMapper::toResponseDTO)
+                    .collect(Collectors.toList());
+
+            return trending.isEmpty() ? getFeaturedCars() : trending;
+        } catch (Exception e) {
+            log.warn("Could not fetch trending cars from Redis: {}. Falling back to featured cars.", e.getMessage());
+            return getFeaturedCars();
         }
-
-        List<Long> ids = topCarIds.stream()
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
-
-        Map<Long, Car> carMap = carRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(Car::getId, car -> car));
-
-        return ids.stream()
-                .map(carMap::get)
-                .filter(Objects::nonNull)
-                .map(CarMapper::toResponseDTO)
-                .collect(Collectors.toList());
     }
 
     // ─── GET ALL CARS (returns DTOs) ───
