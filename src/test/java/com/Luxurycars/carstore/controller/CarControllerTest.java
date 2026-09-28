@@ -168,4 +168,28 @@ class CarControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(5));
     }
+
+    @Test
+    @DisplayName("GET /api/cars/trending - public access should return top trending cars")
+    void getTrendingCars_shouldReturnTrendingList() throws Exception {
+        when(carService.getTrendingCars()).thenReturn(List.of(
+                CarResponseDTO.builder().id(1L).name("Porsche 911").brand("Porsche").build(),
+                CarResponseDTO.builder().id(2L).name("Ferrari SF90").brand("Ferrari").build()
+        ));
+
+        mockMvc.perform(get("/api/cars/trending"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].name").value("Porsche 911"))
+                .andExpect(jsonPath("$[1].name").value("Ferrari SF90"));
+    }
+
+    @Test
+    @DisplayName("POST /api/cars/{id}/view - public access should increment view count")
+    void incrementView_shouldReturnOk() throws Exception {
+        mockMvc.perform(post("/api/cars/1/view"))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(carService).incrementCarView(1L);
+    }
 }

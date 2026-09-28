@@ -10,6 +10,7 @@ import com.Luxurycars.carstore.entity.Role;
 import com.Luxurycars.carstore.exception.BadRequestException;
 import com.Luxurycars.carstore.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import com.Luxurycars.carstore.dto.RefreshTokenRequestDTO;
 import com.Luxurycars.carstore.dto.TokenRefreshResponseDTO;
+import java.time.Duration;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,25 +32,36 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        AuthenticationManager authenticationManager,
-                       @Autowired(required = false) RefreshTokenService refreshTokenService) {
+                       @Autowired(required = false) RefreshTokenService refreshTokenService,
+                       @Autowired(required = false) StringRedisTemplate stringRedisTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.refreshTokenService = refreshTokenService;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService,
+                       AuthenticationManager authenticationManager,
+                       RefreshTokenService refreshTokenService) {
+        this(userRepository, passwordEncoder, jwtService, authenticationManager, refreshTokenService, null);
     }
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        AuthenticationManager authenticationManager) {
-        this(userRepository, passwordEncoder, jwtService, authenticationManager, null);
+        this(userRepository, passwordEncoder, jwtService, authenticationManager, null, null);
     }
 
     // ─── REGISTER ───
@@ -100,15 +113,48 @@ public class AuthService {
     }
 
     public TokenRefreshResponseDTO refreshToken(RefreshTokenRequestDTO dto) {
+        if (dto == null || dto.getRefreshToken() == null) {
+            throw new BadRequestException("Refresh token must not be null");
+        }
+
+        // Validate key existence in Redis before rotating/issuing new tokens
+        if (stringRedisTemplate != null) {
+            String redisKey = "refresh_token:" + dto.getRefreshToken();
+            Boolean exists = stringRedisTemplate.hasKey(redisKey);
+            if (!Boolean.TRUE.equals(exists)) {
+                throw new BadRequestException("Refresh token is invalid, expired, or has been revoked");
+            }
+        }
+
         if (refreshTokenService == null) {
             throw new BadRequestException("Refresh token service is currently unavailable");
         }
-        return refreshTokenService.rotateRefreshToken(dto.getRefreshToken());
+
+        TokenRefreshResponseDTO response = refreshTokenService.rotateRefreshToken(dto.getRefreshToken());
+
+        // Update Redis token store: delete old token and store new rotated token
+        if (stringRedisTemplate != null) {
+            stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
+            if (response.getRefreshToken() != null) {
+                stringRedisTemplate.opsForValue().set(
+                        "refresh_token:" + response.getRefreshToken(),
+                        String.valueOf(response.getUserId()),
+                        Duration.ofSeconds(604800)
+                );
+            }
+        }
+
+        return response;
     }
 
     public void logout(RefreshTokenRequestDTO dto) {
-        if (refreshTokenService != null && dto != null && dto.getRefreshToken() != null) {
-            refreshTokenService.revokeToken(dto.getRefreshToken());
+        if (dto != null && dto.getRefreshToken() != null) {
+            if (stringRedisTemplate != null) {
+                stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
+            }
+            if (refreshTokenService != null) {
+                refreshTokenService.revokeToken(dto.getRefreshToken());
+            }
         }
     }
 
@@ -120,6 +166,13 @@ public class AuthService {
         String refreshToken = null;
         if (refreshTokenService != null) {
             refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+            if (stringRedisTemplate != null && refreshToken != null) {
+                stringRedisTemplate.opsForValue().set(
+                        "refresh_token:" + refreshToken,
+                        String.valueOf(user.getId()),
+                        Duration.ofSeconds(604800)
+                );
+            }
         }
 
         return AuthResponseDTO.builder()

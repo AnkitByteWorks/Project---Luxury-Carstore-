@@ -30,6 +30,12 @@ class CarServiceTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
+    @Mock
+    private org.springframework.data.redis.core.ZSetOperations<String, String> zSetOperations;
+
     @InjectMocks
     private CarService carService;
 
@@ -149,5 +155,36 @@ class CarServiceTest {
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getBrand()).isEqualTo("Porsche");
+    }
+
+    // ═══════════════════════════════════════════════
+    //  Trending cars (Redis ZSET)
+    // ═══════════════════════════════════════════════
+
+    @Test
+    @DisplayName("incrementCarView - should increment score in Redis ZSET")
+    void incrementCarView_shouldIncrementZSetScore() {
+        when(stringRedisTemplate.opsForZSet()).thenReturn(zSetOperations);
+
+        carService.incrementCarView(1L);
+
+        verify(zSetOperations, times(1)).incrementScore("trending_cars", "1", 1);
+    }
+
+    @Test
+    @DisplayName("getTrendingCars - should return top cars ordered by Redis ZSET")
+    void getTrendingCars_shouldReturnOrderedCars() {
+        when(stringRedisTemplate.opsForZSet()).thenReturn(zSetOperations);
+        java.util.LinkedHashSet<String> topIds = new java.util.LinkedHashSet<>(List.of("2", "1"));
+        when(zSetOperations.reverseRange("trending_cars", 0, 4)).thenReturn(topIds);
+
+        Car car2 = Car.builder().id(2L).name("Ferrari SF90").brand("Ferrari").price(new BigDecimal("75000000.00")).build();
+        when(carRepository.findAllById(List.of(2L, 1L))).thenReturn(List.of(testCar, car2));
+
+        List<CarResponseDTO> trending = carService.getTrendingCars();
+
+        assertThat(trending).hasSize(2);
+        assertThat(trending.get(0).getId()).isEqualTo(2L);
+        assertThat(trending.get(1).getId()).isEqualTo(1L);
     }
 }

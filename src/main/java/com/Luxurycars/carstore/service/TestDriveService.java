@@ -11,9 +11,13 @@ import com.Luxurycars.carstore.repository.TestDriveRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.List;
@@ -28,23 +32,40 @@ public class TestDriveService {
     private final TestDriveRepository testDriveRepository;
     private final CarRepository carRepository;
     private final EmailNotificationService emailNotificationService;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     public TestDriveService(TestDriveRepository testDriveRepository,
                             CarRepository carRepository,
-                            @Autowired(required = false) EmailNotificationService emailNotificationService) {
+                            @Autowired(required = false) EmailNotificationService emailNotificationService,
+                            @Autowired(required = false) StringRedisTemplate stringRedisTemplate) {
         this.testDriveRepository = testDriveRepository;
         this.carRepository = carRepository;
         this.emailNotificationService = emailNotificationService;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    public TestDriveService(TestDriveRepository testDriveRepository,
+                            CarRepository carRepository,
+                            EmailNotificationService emailNotificationService) {
+        this(testDriveRepository, carRepository, emailNotificationService, null);
     }
 
     public TestDriveService(TestDriveRepository testDriveRepository, CarRepository carRepository) {
-        this(testDriveRepository, carRepository, null);
+        this(testDriveRepository, carRepository, null, null);
     }
 
     @Transactional
     public TestDriveResponseDTO createTestDrive(TestDriveRequestDTO dto) {
         log.info("Booking VIP test drive for car ID: {} by customer: {}", dto.getCarId(), dto.getCustomerName());
+
+        if (stringRedisTemplate != null) {
+            String lockKey = "lock:testdrive:" + dto.getCarId() + ":" + dto.getPreferredDate() + ":" + dto.getTimeSlot();
+            Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "LOCKED", Duration.ofMinutes(10));
+            if (Boolean.FALSE.equals(acquired)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "This VIP slot is already reserved or currently locked under high demand.");
+            }
+        }
 
         Car car = carRepository.findById(dto.getCarId())
                 .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + dto.getCarId()));

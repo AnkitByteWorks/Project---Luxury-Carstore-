@@ -32,6 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import com.github.benmanes.caffeine.cache.Cache;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class CarService {
@@ -41,14 +44,23 @@ public class CarService {
     private final CarRepository carRepository;
     private final FileStorageService fileStorageService;
     private final CacheManager cacheManager;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     public CarService(CarRepository carRepository,
                       FileStorageService fileStorageService,
-                      CacheManager cacheManager) {
+                      CacheManager cacheManager,
+                      @Autowired(required = false) StringRedisTemplate stringRedisTemplate) {
         this.carRepository = carRepository;
         this.fileStorageService = fileStorageService;
         this.cacheManager = cacheManager;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    public CarService(CarRepository carRepository,
+                      FileStorageService fileStorageService,
+                      CacheManager cacheManager) {
+        this(carRepository, fileStorageService, cacheManager, null);
     }
 
     // ─── STATS ───
@@ -116,6 +128,39 @@ public class CarService {
         return carRepository.findAll().stream()
                 .sorted(Comparator.comparing(Car::getCreatedAt).reversed())
                 .limit(5)
+                .map(CarMapper::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ─── REAL-TIME TRENDING / MOST VIEWED CARS (REDIS ZSET) ───
+    public void incrementCarView(Long id) {
+        log.debug("Incrementing view count in Redis for car ID: {}", id);
+        if (stringRedisTemplate != null) {
+            stringRedisTemplate.opsForZSet().incrementScore("trending_cars", String.valueOf(id), 1);
+        }
+    }
+
+    public List<CarResponseDTO> getTrendingCars() {
+        log.debug("Fetching top trending cars from Redis ZSET");
+        if (stringRedisTemplate == null) {
+            return java.util.Collections.emptyList();
+        }
+
+        Set<String> topCarIds = stringRedisTemplate.opsForZSet().reverseRange("trending_cars", 0, 4);
+        if (topCarIds == null || topCarIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<Long> ids = topCarIds.stream()
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+
+        Map<Long, Car> carMap = carRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Car::getId, car -> car));
+
+        return ids.stream()
+                .map(carMap::get)
+                .filter(Objects::nonNull)
                 .map(CarMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }

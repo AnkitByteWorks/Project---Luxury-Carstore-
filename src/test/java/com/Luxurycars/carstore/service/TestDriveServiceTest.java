@@ -36,6 +36,12 @@ class TestDriveServiceTest {
     @Mock
     private CarRepository carRepository;
 
+    @Mock
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
+    @Mock
+    private org.springframework.data.redis.core.ValueOperations<String, String> valueOperations;
+
     @InjectMocks
     private TestDriveService testDriveService;
 
@@ -63,6 +69,10 @@ class TestDriveServiceTest {
                 .status(TestDriveStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
+
+        lenient().when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.setIfAbsent(anyString(), anyString(), any(java.time.Duration.class)))
+                .thenReturn(Boolean.TRUE);
     }
 
     @Test
@@ -137,5 +147,27 @@ class TestDriveServiceTest {
 
         assertThat(updated.getStatus()).isEqualTo(TestDriveStatus.CONFIRMED);
         verify(testDriveRepository, times(1)).save(testDrive);
+    }
+
+    @Test
+    @DisplayName("createTestDrive - should throw CONFLICT ResponseStatusException when slot is already locked in Redis")
+    void createTestDrive_shouldThrowConflict_whenSlotIsLocked() {
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.setIfAbsent(anyString(), anyString(), any(java.time.Duration.class)))
+                .thenReturn(Boolean.FALSE);
+
+        TestDriveRequestDTO dto = TestDriveRequestDTO.builder()
+                .carId(1L)
+                .customerName("Bruce Wayne")
+                .email("bruce@waynecorp.com")
+                .phone("+91 9999999999")
+                .preferredDate(LocalDate.now().plusDays(2))
+                .timeSlot("11:00 AM - 01:00 PM")
+                .experienceType(ExperienceType.DOORSTEP)
+                .build();
+
+        assertThatThrownBy(() -> testDriveService.createTestDrive(dto))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("This VIP slot is already reserved or currently locked under high demand.");
     }
 }

@@ -94,9 +94,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        // Public — read-only car browsing
+                        // Public — read-only car browsing and view counter
                         .requestMatchers(HttpMethod.GET, "/api/cars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/cars/*/image").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/cars/*/view").permitAll()
 
                         // Admin-only — car mutations
                         .requestMatchers(HttpMethod.POST, "/api/cars/**").hasRole("ADMIN")

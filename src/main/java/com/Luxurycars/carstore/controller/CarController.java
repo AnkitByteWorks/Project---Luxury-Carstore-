@@ -54,6 +54,13 @@ public class CarController {
         return ResponseEntity.ok(carService.getLatestCars());
     }
 
+    // ─── TRENDING CARS (Top 5 from Redis ZSET) ───
+    @Operation(summary = "Get top 5 trending / most viewed cars")
+    @GetMapping("/trending")
+    public ResponseEntity<List<CarResponseDTO>> getTrending() {
+        return ResponseEntity.ok(carService.getTrendingCars());
+    }
+
     // ─── GET ALL (returns DTOs, NOT entities) ───
     @Operation(summary = "Get all cars (paginated + sorted)",
             description = "Example: /api/cars?page=0&size=10&sortBy=price&direction=desc")
@@ -78,6 +85,14 @@ public class CarController {
     @GetMapping("/{id}")
     public ResponseEntity<CarResponseDTO> getCarById(@PathVariable Long id) {
         return ResponseEntity.ok(carService.getCarById(id));
+    }
+
+    // ─── INCREMENT VIEW COUNTER ───
+    @Operation(summary = "Increment car view counter in Redis")
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Void> incrementView(@PathVariable Long id) {
+        carService.incrementCarView(id);
+        return ResponseEntity.ok().build();
     }
 
     // ─── CREATE (accepts CarRequestDTO, validated) ───

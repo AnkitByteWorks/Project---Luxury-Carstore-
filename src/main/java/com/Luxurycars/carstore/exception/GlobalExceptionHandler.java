@@ -123,7 +123,28 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
-    // ─── 7. FALLBACK — ANY OTHER EXCEPTION (500) ───
+    // ─── 7. RESPONSE STATUS EXCEPTION (e.g. 409 CONFLICT) ───
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(
+            org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {
+
+        int statusCode = ex.getStatusCode().value();
+        String errorName = HttpStatus.resolve(statusCode) != null
+                ? HttpStatus.resolve(statusCode).getReasonPhrase()
+                : "Error";
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(statusCode)
+                .error(errorName)
+                .message(ex.getReason() != null ? ex.getReason() : ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return new ResponseEntity<>(error, ex.getStatusCode());
+    }
+
+    // ─── 8. FALLBACK — ANY OTHER EXCEPTION (500) ───
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {

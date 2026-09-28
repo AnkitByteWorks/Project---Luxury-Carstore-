@@ -27,6 +27,18 @@
         - carstore-network
 
     # ═══════════════════════════════════════════
+    #  Redis 7
+    # ═══════════════════════════════════════════
+    redis:
+      image: redis:7-alpine
+      container_name: carstore-redis
+      restart: unless-stopped
+      ports:
+        - "6379:6379"
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
     #  Spring Boot App (Java 25)
     # ═══════════════════════════════════════════
     carstore-app:
@@ -38,6 +50,8 @@
       depends_on:
         mysql:
           condition: service_healthy
+        redis:
+          condition: service_started
       environment:
         SPRING_PROFILES_ACTIVE: prod
         DB_URL: jdbc:mysql://mysql:3306/luxury_cars_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -45,6 +59,8 @@
         DB_PASSWORD: carstore_pass
         JWT_SECRET: ThisIsAVeryLongSecretKeyForJwtSigningMustBeAtLeast32BytesLongForHS256!
         JWT_EXPIRATION: 86400000
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
         UPLOAD_DIR: /app/uploads/cars
         PORT: 8080
       ports:
