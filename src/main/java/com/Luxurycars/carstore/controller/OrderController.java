@@ -1,5 +1,6 @@
 package com.Luxurycars.carstore.controller;
 
+import com.Luxurycars.carstore.dto.CarrierTelemetryDTO;
 import com.Luxurycars.carstore.dto.OrderRequestDTO;
 import com.Luxurycars.carstore.dto.OrderResponseDTO;
 import com.Luxurycars.carstore.dto.OrderStatsDTO;
@@ -187,5 +188,15 @@ public class OrderController {
     @GetMapping(value = "/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeToOrderEvents(@PathVariable Long id) {
         return orderEventService.subscribe(id);
+    }
+
+    // ────────────────────────────────────────────────
+    // 11. ENCLOSED CARRIER GPS TELEMETRY
+    // GET /api/orders/{id}/carrier-telemetry
+    // ────────────────────────────────────────────────
+    @Operation(summary = "Get live white-glove enclosed carrier GPS telemetry", description = "Returns live GPS logistics telemetry including carrier ID, waypoint, temperature, speed, and ETA")
+    @GetMapping("/{id}/carrier-telemetry")
+    public ResponseEntity<CarrierTelemetryDTO> getCarrierTelemetry(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getCarrierTelemetry(id));
     }
 }

@@ -72,6 +72,13 @@ public class Order {
     @Column(name = "custom_price", precision = 15, scale = 2)
     private BigDecimal customPrice;         // bespoke option outlay
 
+    // ─── MONOGRAM SPEC ───
+    @Column(name = "monogram_text", length = 255)
+    private String monogramText;
+
+    @Column(name = "monogram_color", length = 100)
+    private String monogramColor;
+
     // ─── TIMESTAMPS ───
     @Column(name = "ordered_at", updatable = false)
     private LocalDateTime orderedAt;

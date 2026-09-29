@@ -38,6 +38,11 @@ public class JwtService {
         return createToken(claims, userDetails.getUsername());
     }
 
+    public String generateTokenForSubject(String subject, Map<String, Object> extraClaims) {
+        Map<String, Object> claims = extraClaims != null ? new HashMap<>(extraClaims) : new HashMap<>();
+        return createToken(claims, subject);
+    }
+
     private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);

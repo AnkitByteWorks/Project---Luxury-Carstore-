@@ -44,6 +44,10 @@ public class OrderResponseDTO {
     private String customOptions;
     private BigDecimal customPrice;
 
+    // Personalized Sill Monogram
+    private String monogramText;
+    private String monogramColor;
+
     // Timestamps
     private LocalDateTime orderedAt;
     private LocalDateTime updatedAt;

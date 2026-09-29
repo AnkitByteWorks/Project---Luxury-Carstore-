@@ -135,4 +135,55 @@ class OrderServiceTest {
         // Total should be 28500000 + 1500000 = 30000000
         assertThat(result.getTotalAmount()).isEqualByComparingTo("30000000.00");
     }
+
+    @Test
+    @DisplayName("placeOrder - should save monogram text and color")
+    void placeOrder_shouldIncludeMonogram() {
+        when(carRepository.findById(1L)).thenReturn(Optional.of(testCar));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(3L);
+            return o;
+        });
+
+        OrderRequestDTO dto = OrderRequestDTO.builder()
+                .carId(1L).quantity(1)
+                .customerName("Lord Bruce").customerEmail("bruce@wayne.com")
+                .customerPhone("9876543210")
+                .deliveryAddress("Wayne Manor").deliveryCity("Gotham").deliveryPincode("400001")
+                .paymentMethod("UPI")
+                .monogramText("WAYNE • GOTHAM 01")
+                .monogramColor("Amber Gold")
+                .build();
+
+        OrderResponseDTO result = orderService.placeOrder(dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMonogramText()).isEqualTo("WAYNE • GOTHAM 01");
+        assertThat(result.getMonogramColor()).isEqualTo("Amber Gold");
+    }
+
+    @Test
+    @DisplayName("getCarrierTelemetry - should return simulated live GPS logistics data")
+    void getCarrierTelemetry_shouldReturnValidData() {
+        Order confirmedOrder = Order.builder()
+                .id(105L)
+                .carId(1L)
+                .carName("Porsche 911")
+                .deliveryCity("Bangalore")
+                .status(OrderStatus.CONFIRMED)
+                .build();
+
+        when(orderRepository.findById(105L)).thenReturn(Optional.of(confirmedOrder));
+
+        com.Luxurycars.carstore.dto.CarrierTelemetryDTO telemetry = orderService.getCarrierTelemetry(105L);
+
+        assertThat(telemetry).isNotNull();
+        assertThat(telemetry.getOrderId()).isEqualTo(105L);
+        assertThat(telemetry.getCarrierId()).startsWith("VIP-CARRIER-");
+        assertThat(telemetry.getProgressPercent()).isEqualTo(68);
+        assertThat(telemetry.getTransitSpeedKmH()).isEqualTo(78);
+        assertThat(telemetry.getDestinationCity()).isEqualTo("Bangalore");
+        assertThat(telemetry.getEstimatedArrival()).isNotNull();
+    }
 }

@@ -27,16 +27,19 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository;
+    private final com.Luxurycars.carstore.repository.VaultAllocationRepository vaultAllocationRepository;
 
     @Autowired
     public DataSeeder(CarRepository carRepository,
                       UserRepository userRepository,
                       PasswordEncoder passwordEncoder,
-                      @Autowired(required = false) com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository) {
+                      @Autowired(required = false) com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository,
+                      @Autowired(required = false) com.Luxurycars.carstore.repository.VaultAllocationRepository vaultAllocationRepository) {
         this.carRepository = carRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auctionLotRepository = auctionLotRepository;
+        this.vaultAllocationRepository = vaultAllocationRepository;
     }
 
     @Override
@@ -100,6 +103,67 @@ public class DataSeeder implements CommandLineRunner {
             );
             auctionLotRepository.saveAll(lots);
             log.info("✅ Successfully seeded 3 hypercar auction lots!");
+        }
+
+        // ─── Seed Secret Vault Allocations ───
+        if (vaultAllocationRepository != null && vaultAllocationRepository.count() == 0) {
+            log.info("🔒 Seeding confidential secret vault hypercar allocations...");
+            List<com.Luxurycars.carstore.entity.VaultAllocation> vaultCars = List.of(
+                    com.Luxurycars.carstore.entity.VaultAllocation.builder()
+                            .id("v-01")
+                            .name("Pagani Huayra R")
+                            .builder("Horacio Pagani Atelier (San Cesario sul Panaro)")
+                            .chassisNumber("Chassis #14/30 • Carbo-Titanium HP62 G2")
+                            .productionRun("1 of 30 Worldwide")
+                            .engineSpecs("6.0L Naturally Aspirated V12 (HWA AG)")
+                            .horsepower(850)
+                            .topSpeedKmH(380)
+                            .price(new BigDecimal("350000000.00"))
+                            .imageUrl("https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?auto=format&fit=crop&w=1200&q=80")
+                            .status("Private Allocation Available")
+                            .build(),
+                    com.Luxurycars.carstore.entity.VaultAllocation.builder()
+                            .id("v-02")
+                            .name("Koenigsegg Jesko Absolut")
+                            .builder("Koenigsegg Automotive (Ängelholm, Sweden)")
+                            .chassisNumber("Chassis #007 • Low-Drag High-Speed Monocoque")
+                            .productionRun("Strictly Limited Production")
+                            .engineSpecs("5.0L Twin-Turbo Flat-Plane V8 (E85 Capable)")
+                            .horsepower(1600)
+                            .topSpeedKmH(531)
+                            .price(new BigDecimal("420000000.00"))
+                            .imageUrl("https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=1200&q=80")
+                            .status("Build Slot #04 Reserved for Delivery")
+                            .build(),
+                    com.Luxurycars.carstore.entity.VaultAllocation.builder()
+                            .id("v-03")
+                            .name("Aston Martin Valkyrie AMR Pro")
+                            .builder("Aston Martin Performance Technologies (Gaydon)")
+                            .chassisNumber("Chassis #22/40 • Full Carbon Aerocell")
+                            .productionRun("1 of 40 Worldwide")
+                            .engineSpecs("6.5L Naturally Aspirated Cosworth V12")
+                            .horsepower(1000)
+                            .topSpeedKmH(362)
+                            .price(new BigDecimal("385000000.00"))
+                            .imageUrl("https://images.unsplash.com/photo-1621135802920-133df287f89c?auto=format&fit=crop&w=1200&q=80")
+                            .status("Final Chassis Available")
+                            .build(),
+                    com.Luxurycars.carstore.entity.VaultAllocation.builder()
+                            .id("v-04")
+                            .name("Bugatti Bolide Track Homologation")
+                            .builder("Bugatti Atelier (Molsheim, France)")
+                            .chassisNumber("Chassis #03/40 • FIA LMH Carbon Monocoque")
+                            .productionRun("1 of 40 Worldwide")
+                            .engineSpecs("8.0L Quad-Turbo W16 (110 Octane Race Fuel)")
+                            .horsepower(1850)
+                            .topSpeedKmH(500)
+                            .price(new BigDecimal("440000000.00"))
+                            .imageUrl("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80")
+                            .status("Confidential Slot Inquire Only")
+                            .build()
+            );
+            vaultAllocationRepository.saveAll(vaultCars);
+            log.info("✅ Successfully seeded 4 confidential vault allocations!");
         }
 
         if (carRepository.count() > 0) {

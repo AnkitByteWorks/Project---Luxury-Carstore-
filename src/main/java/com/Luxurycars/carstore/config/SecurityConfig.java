@@ -121,10 +121,16 @@ public class SecurityConfig {
                         // Live Hypercar Auctions (Active lots, live SSE bid streams, bid submissions)
                         .requestMatchers("/api/auctions/**").permitAll()
 
+                        // Secret Vault & VIP Allocations (Passcode verify, slots, inquiries)
+                        .requestMatchers("/api/vault/**").permitAll()
+
                         // Public — Payment Webhook Callback & Intent Creation
                         .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
                         .requestMatchers("/api/payments/intent/**").permitAll()
                         .requestMatchers("/api/payments/create-intent").permitAll()
+
+                        // Public — White-Glove Enclosed Carrier GPS Telemetry Tracking
+                        .requestMatchers(HttpMethod.GET, "/api/orders/*/carrier-telemetry").permitAll()
 
                         // Any logged-in user — order endpoints
                         .requestMatchers("/api/orders/**").authenticated()

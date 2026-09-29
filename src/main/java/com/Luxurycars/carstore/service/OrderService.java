@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -99,6 +100,8 @@ public class OrderService {
                 .totalAmount(total)
                 .customOptions(dto.getCustomOptions())
                 .customPrice(dto.getCustomPrice())
+                .monogramText(dto.getMonogramText())
+                .monogramColor(dto.getMonogramColor())
                 .customerName(dto.getCustomerName())
                 .customerEmail(dto.getCustomerEmail())
                 .customerPhone(dto.getCustomerPhone())
@@ -199,5 +202,50 @@ public class OrderService {
         Page<Order> orderPage = orderRepository.findAll(pageable);
         Page<OrderResponseDTO> dtoPage = orderPage.map(OrderMapper::toResponseDTO);
         return PageResponseDTO.from(dtoPage);
+    }
+
+    public CarrierTelemetryDTO getCarrierTelemetry(Long orderId) {
+        Order order = findOrderOrThrow(orderId);
+
+        String city = order.getDeliveryCity() != null ? order.getDeliveryCity() : "Mumbai";
+        String carrierId = "VIP-CARRIER-" + String.format("%03d", (order.getId() % 100) + 1);
+
+        int progress;
+        String waypoint;
+        int speed;
+        double temp = 21.4;
+        String security = "Climate-Controlled Transporter • Air Suspension Active • Satellite Tracked";
+
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            progress = 100;
+            waypoint = "Delivered to Private Residence (" + city + ")";
+            speed = 0;
+            security = "Delivery Complete • Client Received Keys in Bespoke Presentation Box";
+        } else if (order.getStatus() == OrderStatus.CONFIRMED || order.getStatus() == OrderStatus.PROCESSING) {
+            progress = 68;
+            waypoint = "En Route via NH-48 Expressway approaching " + city;
+            speed = 78;
+        } else {
+            progress = 18;
+            waypoint = "Pre-Transit Secure Preparation at Flagship Atelier (Mumbai)";
+            speed = 0;
+            security = "White-Glove PDI & Ceramic Shield Inspection Underway";
+        }
+
+        LocalDateTime eta = LocalDateTime.now().plusHours(3).plusMinutes(25);
+
+        return CarrierTelemetryDTO.builder()
+                .orderId(order.getId())
+                .carrierId(carrierId)
+                .carrierName("Carstore White-Glove Enclosed Carrier")
+                .driverName("Vikram Rathore (Level 3 Armed Escort Specialist)")
+                .currentWaypoint(waypoint)
+                .transitSpeedKmH(speed)
+                .trailerTempCelsius(temp)
+                .progressPercent(progress)
+                .estimatedArrival(eta)
+                .destinationCity(city)
+                .transportSecurityStatus(security)
+                .build();
     }
 }

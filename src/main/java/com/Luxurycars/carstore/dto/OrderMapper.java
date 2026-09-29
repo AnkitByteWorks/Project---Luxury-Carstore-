@@ -23,6 +23,8 @@ public class OrderMapper {
                 .status(order.getStatus())
                 .customOptions(order.getCustomOptions())
                 .customPrice(order.getCustomPrice())
+                .monogramText(order.getMonogramText())
+                .monogramColor(order.getMonogramColor())
                 .orderedAt(order.getOrderedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

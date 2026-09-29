@@ -141,4 +141,23 @@ class InvoiceServiceTest {
         assertThat(pdfBytes.length).isGreaterThan(100);
         assertThat(new String(pdfBytes, 0, 5)).isEqualTo("%PDF-");
     }
+
+    @Test
+    @DisplayName("generateInvoicePdf - should generate PDF with Personalized Sill Monogram line item")
+    void generateInvoicePdf_shouldGeneratePdfWithPersonalizedMonogram() {
+        testOrder.setMonogramText("WAYNE VIP • CHASSIS 01");
+        testOrder.setMonogramColor("Cyber Blue");
+
+        when(orderRepository.findById(101L)).thenReturn(Optional.of(testOrder));
+        when(carRepository.findById(5L)).thenReturn(Optional.of(testCar));
+
+        Authentication adminAuth = new UsernamePasswordAuthenticationToken(
+                "admin", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+        byte[] pdfBytes = invoiceService.generateInvoicePdf(101L, adminAuth);
+
+        assertThat(pdfBytes).isNotNull();
+        assertThat(pdfBytes.length).isGreaterThan(100);
+        assertThat(new String(pdfBytes, 0, 5)).isEqualTo("%PDF-");
+    }
 }

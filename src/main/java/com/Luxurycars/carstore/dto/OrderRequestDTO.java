@@ -44,4 +44,8 @@ public class OrderRequestDTO {
     // Bespoke Car Configurator Options (Optional)
     private String customOptions;
     private BigDecimal customPrice;
+
+    // Personalized Sill Monogram (Optional)
+    private String monogramText;
+    private String monogramColor;
 }

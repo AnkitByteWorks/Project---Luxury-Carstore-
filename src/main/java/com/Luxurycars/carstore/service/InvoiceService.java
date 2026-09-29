@@ -198,89 +198,50 @@ public class InvoiceService {
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
             boolean hasBespokeOptions = order.getCustomOptions() != null && !order.getCustomOptions().trim().isEmpty();
+            boolean hasMonogram = order.getMonogramText() != null && !order.getMonogramText().trim().isEmpty();
 
-            if (!hasBespokeOptions) {
-                // Standard Single Line Item
-                BigDecimal basePrice = totalAmount.divide(divisor, 2, RoundingMode.HALF_UP);
-                BigDecimal taxAmount = totalAmount.subtract(basePrice);
+            // Vehicle Base Calculation
+            BigDecimal vehicleTotal = order.getUnitPrice() != null
+                    ? order.getUnitPrice().multiply(BigDecimal.valueOf(order.getQuantity() != null ? order.getQuantity() : 1))
+                    : totalAmount;
+            BigDecimal vehicleBase = vehicleTotal.divide(divisor, 2, RoundingMode.HALF_UP);
+            BigDecimal vehicleTax = vehicleTotal.subtract(vehicleBase);
 
-                PdfPCell c1 = new PdfPCell(new Phrase("1", regularFont));
-                c1.setHorizontalAlignment(Element.ALIGN_CENTER);
+            // Bespoke Custom Spec Calculation
+            BigDecimal customTotal = order.getCustomPrice() != null ? order.getCustomPrice() : BigDecimal.ZERO;
+            BigDecimal customBase = customTotal.divide(divisor, 2, RoundingMode.HALF_UP);
+            BigDecimal customTax = customTotal.subtract(customBase);
 
-                String vehicleDesc = order.getCarName() + (car != null && car.getColorOptions() != null ? "\nColor: " + car.getColorOptions() : "");
-                PdfPCell c2 = new PdfPCell(new Phrase(vehicleDesc, regularFont));
+            int itemIndex = 1;
 
-                PdfPCell c3 = new PdfPCell(new Phrase(car != null && car.getShowroomLocation() != null ? car.getShowroomLocation() : "Mumbai", regularFont));
-                c3.setHorizontalAlignment(Element.ALIGN_CENTER);
+            // Row 1: Vehicle
+            PdfPCell c1 = new PdfPCell(new Phrase(String.valueOf(itemIndex++), regularFont));
+            c1.setHorizontalAlignment(Element.ALIGN_CENTER);
 
-                PdfPCell c4 = new PdfPCell(new Phrase(currencyFormat.format(basePrice), regularFont));
-                c4.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            String vehicleDesc = order.getCarName() + (car != null && car.getColorOptions() != null ? "\nColor: " + car.getColorOptions() : "");
+            PdfPCell c2 = new PdfPCell(new Phrase(vehicleDesc, regularFont));
 
-                PdfPCell c5 = new PdfPCell(new Phrase(currencyFormat.format(taxAmount), regularFont));
-                c5.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            PdfPCell c3 = new PdfPCell(new Phrase(car != null && car.getShowroomLocation() != null ? car.getShowroomLocation() : "Mumbai", regularFont));
+            c3.setHorizontalAlignment(Element.ALIGN_CENTER);
 
-                PdfPCell c6 = new PdfPCell(new Phrase(currencyFormat.format(totalAmount), boldFont));
-                c6.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            PdfPCell c4 = new PdfPCell(new Phrase(currencyFormat.format(vehicleBase), regularFont));
+            c4.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-                for (PdfPCell c : new PdfPCell[]{c1, c2, c3, c4, c5, c6}) {
-                    c.setPadding(8f);
-                    c.setBorderColor(BORDER_COLOR);
-                    itemsTable.addCell(c);
-                }
+            PdfPCell c5 = new PdfPCell(new Phrase(currencyFormat.format(vehicleTax), regularFont));
+            c5.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-                document.add(itemsTable);
+            PdfPCell c6 = new PdfPCell(new Phrase(currencyFormat.format(vehicleTotal), boldFont));
+            c6.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-                // Totals Breakdown
-                PdfPTable totalsTable = new PdfPTable(2);
-                totalsTable.setWidthPercentage(45);
-                totalsTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                totalsTable.setWidths(new float[]{55, 45});
+            for (PdfPCell c : new PdfPCell[]{c1, c2, c3, c4, c5, c6}) {
+                c.setPadding(8f);
+                c.setBorderColor(BORDER_COLOR);
+                itemsTable.addCell(c);
+            }
 
-                addTotalRow(totalsTable, "Vehicle Base Outlay:", currencyFormat.format(basePrice), regularFont, regularFont);
-                addTotalRow(totalsTable, "Luxury Goods GST (18%):", currencyFormat.format(taxAmount), regularFont, regularFont);
-                addTotalRow(totalsTable, "Grand Total Outlay:", currencyFormat.format(totalAmount), boldFont, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, GOLD));
-
-                document.add(totalsTable);
-            } else {
-                // Vehicle Base Calculation
-                BigDecimal vehicleTotal = order.getUnitPrice() != null
-                        ? order.getUnitPrice().multiply(BigDecimal.valueOf(order.getQuantity() != null ? order.getQuantity() : 1))
-                        : totalAmount;
-                BigDecimal vehicleBase = vehicleTotal.divide(divisor, 2, RoundingMode.HALF_UP);
-                BigDecimal vehicleTax = vehicleTotal.subtract(vehicleBase);
-
-                // Bespoke Custom Spec Calculation
-                BigDecimal customTotal = order.getCustomPrice() != null ? order.getCustomPrice() : BigDecimal.ZERO;
-                BigDecimal customBase = customTotal.divide(divisor, 2, RoundingMode.HALF_UP);
-                BigDecimal customTax = customTotal.subtract(customBase);
-
-                // Row 1: Vehicle
-                PdfPCell c1 = new PdfPCell(new Phrase("1", regularFont));
-                c1.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-                String vehicleDesc = order.getCarName() + (car != null && car.getColorOptions() != null ? "\nColor: " + car.getColorOptions() : "");
-                PdfPCell c2 = new PdfPCell(new Phrase(vehicleDesc, regularFont));
-
-                PdfPCell c3 = new PdfPCell(new Phrase(car != null && car.getShowroomLocation() != null ? car.getShowroomLocation() : "Mumbai", regularFont));
-                c3.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-                PdfPCell c4 = new PdfPCell(new Phrase(currencyFormat.format(vehicleBase), regularFont));
-                c4.setHorizontalAlignment(Element.ALIGN_RIGHT);
-
-                PdfPCell c5 = new PdfPCell(new Phrase(currencyFormat.format(vehicleTax), regularFont));
-                c5.setHorizontalAlignment(Element.ALIGN_RIGHT);
-
-                PdfPCell c6 = new PdfPCell(new Phrase(currencyFormat.format(vehicleTotal), boldFont));
-                c6.setHorizontalAlignment(Element.ALIGN_RIGHT);
-
-                for (PdfPCell c : new PdfPCell[]{c1, c2, c3, c4, c5, c6}) {
-                    c.setPadding(8f);
-                    c.setBorderColor(BORDER_COLOR);
-                    itemsTable.addCell(c);
-                }
-
-                // Row 2: Bespoke Customization Spec Line Item
-                PdfPCell b1 = new PdfPCell(new Phrase("2", regularFont));
+            // Optional Row 2: Bespoke Customization Spec Line Item
+            if (hasBespokeOptions) {
+                PdfPCell b1 = new PdfPCell(new Phrase(String.valueOf(itemIndex++), regularFont));
                 b1.setHorizontalAlignment(Element.ALIGN_CENTER);
 
                 String bespokeDesc = "Bespoke Customization Spec\n" + order.getCustomOptions();
@@ -303,27 +264,58 @@ public class InvoiceService {
                     b.setBorderColor(BORDER_COLOR);
                     itemsTable.addCell(b);
                 }
-
-                document.add(itemsTable);
-
-                // Adjusted Totals Breakdown
-                PdfPTable totalsTable = new PdfPTable(2);
-                totalsTable.setWidthPercentage(50);
-                totalsTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                totalsTable.setWidths(new float[]{55, 45});
-
-                BigDecimal totalBase = vehicleBase.add(customBase);
-                BigDecimal totalTax = vehicleTax.add(customTax);
-
-                addTotalRow(totalsTable, "Vehicle Base Outlay:", currencyFormat.format(vehicleBase), regularFont, regularFont);
-                if (customTotal.compareTo(BigDecimal.ZERO) > 0) {
-                    addTotalRow(totalsTable, "Bespoke Custom Outlay:", currencyFormat.format(customBase), regularFont, regularFont);
-                }
-                addTotalRow(totalsTable, "Luxury Goods GST (18%):", currencyFormat.format(totalTax), regularFont, regularFont);
-                addTotalRow(totalsTable, "Grand Total Outlay:", currencyFormat.format(totalAmount), boldFont, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, GOLD));
-
-                document.add(totalsTable);
             }
+
+            // Optional Row 3: Personalized Illuminated Sill Monogram Line Item
+            if (hasMonogram) {
+                PdfPCell m1 = new PdfPCell(new Phrase(String.valueOf(itemIndex++), regularFont));
+                m1.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+                String monoDesc = "Personalized Illuminated Sill Monogram\nInscription: \"" + order.getMonogramText() + "\"" +
+                        (order.getMonogramColor() != null ? " • Illumination: " + order.getMonogramColor() : "");
+                PdfPCell m2 = new PdfPCell(new Phrase(monoDesc, regularFont));
+
+                PdfPCell m3 = new PdfPCell(new Phrase("VIP Studio", regularFont));
+                m3.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+                PdfPCell m4 = new PdfPCell(new Phrase(currencyFormat.format(BigDecimal.ZERO), regularFont));
+                m4.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+                PdfPCell m5 = new PdfPCell(new Phrase(currencyFormat.format(BigDecimal.ZERO), regularFont));
+                m5.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+                PdfPCell m6 = new PdfPCell(new Phrase("VIP Benefit", boldFont));
+                m6.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+                for (PdfPCell m : new PdfPCell[]{m1, m2, m3, m4, m5, m6}) {
+                    m.setPadding(8f);
+                    m.setBorderColor(BORDER_COLOR);
+                    itemsTable.addCell(m);
+                }
+            }
+
+            document.add(itemsTable);
+
+            // Totals Breakdown
+            PdfPTable totalsTable = new PdfPTable(2);
+            totalsTable.setWidthPercentage(50);
+            totalsTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            totalsTable.setWidths(new float[]{55, 45});
+
+            BigDecimal totalBase = vehicleBase.add(customBase);
+            BigDecimal totalTax = vehicleTax.add(customTax);
+
+            addTotalRow(totalsTable, "Vehicle Base Outlay:", currencyFormat.format(vehicleBase), regularFont, regularFont);
+            if (customTotal.compareTo(BigDecimal.ZERO) > 0) {
+                addTotalRow(totalsTable, "Bespoke Custom Outlay:", currencyFormat.format(customBase), regularFont, regularFont);
+            }
+            if (hasMonogram) {
+                addTotalRow(totalsTable, "Sill Monogram Inscription:", "Complimentary", regularFont, regularFont);
+            }
+            addTotalRow(totalsTable, "Luxury Goods GST (18%):", currencyFormat.format(totalTax), regularFont, regularFont);
+            addTotalRow(totalsTable, "Grand Total Outlay:", currencyFormat.format(totalAmount), boldFont, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, GOLD));
+
+            document.add(totalsTable);
 
             document.add(new Paragraph(" "));
             document.add(new Paragraph(" "));
