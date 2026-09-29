@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -161,13 +162,19 @@ public class CarController {
         return ResponseEntity.ok("Image uploaded for car id " + id);
     }
 
-    // ─── IMAGE FETCH (still returns raw bytes) ───
+    // ─── IMAGE FETCH (raw bytes or redirect to CDN) ───
     @Operation(summary = "Get the image bytes for a car")
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
+    public ResponseEntity<?> getImage(@PathVariable Long id) {
         byte[] image = carService.getCarImage(id);
 
         if (image == null || image.length == 0) {
+            var car = carService.getCarById(id);
+            if (car.getImageUrl() != null && !car.getImageUrl().isBlank()) {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create(car.getImageUrl()))
+                        .build();
+            }
             return ResponseEntity.notFound().build();
         }
 
