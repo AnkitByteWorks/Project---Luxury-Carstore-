@@ -40,4 +40,8 @@ public class OrderRequestDTO {
 
     @NotBlank(message = "Payment method is required")
     private String paymentMethod;
+
+    // Bespoke Car Configurator Options (Optional)
+    private String customOptions;
+    private BigDecimal customPrice;
 }

@@ -32,6 +32,18 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.createPaymentIntent(dto));
     }
 
+    @Operation(summary = "Create payment intent for an order (UPI QR Code / Card)")
+    @PostMapping("/intent/{orderId}")
+    public ResponseEntity<PaymentIntentResponseDTO> createIntentForOrder(
+            @PathVariable Long orderId,
+            @RequestParam(required = false, defaultValue = "UPI") String paymentMethod,
+            @RequestBody(required = false) PaymentIntentRequestDTO body) {
+        String method = (body != null && body.getPaymentMethod() != null && !body.getPaymentMethod().isBlank())
+                ? body.getPaymentMethod()
+                : paymentMethod;
+        return ResponseEntity.ok(paymentService.createPaymentIntent(orderId, method));
+    }
+
     @Operation(summary = "Payment gateway webhook callback (Public)")
     @PostMapping("/webhook")
     public ResponseEntity<Map<String, Object>> handleWebhook(

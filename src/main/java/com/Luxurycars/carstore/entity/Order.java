@@ -65,6 +65,13 @@ public class Order {
     @Column(nullable = false, length = 20)
     private OrderStatus status = OrderStatus.PENDING;
 
+    // ─── BESPOKE CUSTOMIZATION SPEC ───
+    @Column(name = "custom_options", length = 2000)
+    private String customOptions;           // e.g. "21\" Forged Monoblock Wheels, Carbon Ceramic Brakes"
+
+    @Column(name = "custom_price", precision = 15, scale = 2)
+    private BigDecimal customPrice;         // bespoke option outlay
+
     // ─── TIMESTAMPS ───
     @Column(name = "ordered_at", updatable = false)
     private LocalDateTime orderedAt;

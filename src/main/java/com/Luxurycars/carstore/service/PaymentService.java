@@ -38,6 +38,13 @@ public class PaymentService {
         this.emailNotificationService = emailNotificationService;
     }
 
+    public PaymentIntentResponseDTO createPaymentIntent(Long orderId, String paymentMethod) {
+        return createPaymentIntent(PaymentIntentRequestDTO.builder()
+                .orderId(orderId)
+                .paymentMethod(paymentMethod != null ? paymentMethod : "UPI")
+                .build());
+    }
+
     public PaymentIntentResponseDTO createPaymentIntent(PaymentIntentRequestDTO dto) {
         Order order = orderRepository.findById(dto.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + dto.getOrderId()));
@@ -46,11 +53,29 @@ public class PaymentService {
             throw new BadRequestException("Order #ORD-" + order.getId() + " is already paid and confirmed.");
         }
 
-        String intentId = "pi_lux_" + UUID.randomUUID().toString().substring(0, 12);
+        String method = (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank())
+                ? dto.getPaymentMethod().trim()
+                : "CARD";
+
+        String intentId = (method.equalsIgnoreCase("UPI") ? "upi_" : "pi_lux_")
+                + UUID.randomUUID().toString().substring(0, 12);
         String clientSecret = "sec_lux_" + UUID.randomUUID().toString();
 
-        log.info("💳 Initialized payment intent {} for Order #ORD-{} with amount {}",
-                intentId, order.getId(), order.getTotalAmount());
+        String upiString = null;
+        if ("UPI".equalsIgnoreCase(method)) {
+            // Dynamic UPI payment string: upi://pay?pa=carstore.bespoke@icici&pn=CarstoreVIP&am={orderTotal}&tr={orderId}&cu=INR
+            upiString = "upi://pay?pa=carstore.bespoke@icici&pn=CarstoreVIP&am="
+                    + order.getTotalAmount().toPlainString()
+                    + "&tr=" + order.getId()
+                    + "&cu=INR";
+
+            // Record preferred payment method on order
+            order.setPaymentMethod("UPI");
+            orderRepository.save(order);
+        }
+
+        log.info("💳 Initialized payment intent {} ({}) for Order #ORD-{} with amount {}",
+                intentId, method, order.getId(), order.getTotalAmount());
 
         return PaymentIntentResponseDTO.builder()
                 .paymentIntentId(intentId)
@@ -59,6 +84,8 @@ public class PaymentService {
                 .currency("INR")
                 .clientSecret(clientSecret)
                 .status("REQUIRES_PAYMENT")
+                .paymentMethod(method.toUpperCase())
+                .upiString(upiString)
                 .checkoutUrl("/checkout/pay?intent=" + intentId + "&order=" + order.getId())
                 .build();
     }
@@ -74,10 +101,17 @@ public class PaymentService {
         if ("payment_intent.succeeded".equalsIgnoreCase(dto.getEventType())) {
             if (order.getStatus() != OrderStatus.CONFIRMED) {
                 order.setStatus(OrderStatus.CONFIRMED);
-                order.setPaymentMethod("CARD (Verified via Payment Gateway)");
+
+                boolean isUpi = (order.getPaymentMethod() != null && order.getPaymentMethod().toUpperCase().contains("UPI"))
+                        || (dto.getPaymentIntentId() != null && dto.getPaymentIntentId().toLowerCase().startsWith("upi"));
+                order.setPaymentMethod(isUpi
+                        ? "UPI (Verified via Payment Gateway)"
+                        : "CARD (Verified via Payment Gateway)");
+
                 Order updated = orderRepository.save(order);
 
-                log.info("✅ Order #ORD-{} marked as CONFIRMED via Payment Webhook", updated.getId());
+                log.info("✅ Order #ORD-{} marked as CONFIRMED via Payment Webhook ({})",
+                        updated.getId(), updated.getPaymentMethod());
 
                 // Broadcast live real-time update to connected frontend subscribers
                 if (orderEventService != null) {

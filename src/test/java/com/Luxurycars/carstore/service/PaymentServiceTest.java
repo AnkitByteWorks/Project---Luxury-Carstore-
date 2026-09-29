@@ -111,4 +111,42 @@ class PaymentServiceTest {
         verify(orderEventService, times(1)).publishOrderEvent(eq(1L), any(OrderResponseDTO.class));
         verify(emailNotificationService, times(1)).sendOrderConfirmationEmail(eq(testOrder), any());
     }
+
+    @Test
+    @DisplayName("createPaymentIntent - should support UPI and generate dynamic UPI string")
+    void createPaymentIntent_shouldSupportUpiAndGenerateDynamicUpiString() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+
+        PaymentIntentResponseDTO response = paymentService.createPaymentIntent(1L, "UPI");
+
+        assertThat(response).isNotNull();
+        assertThat(response.getOrderId()).isEqualTo(1L);
+        assertThat(response.getPaymentMethod()).isEqualTo("UPI");
+        assertThat(response.getUpiString()).isNotNull();
+        assertThat(response.getUpiString()).isEqualTo(
+                "upi://pay?pa=carstore.bespoke@icici&pn=CarstoreVIP&am=400000000.00&tr=1&cu=INR"
+        );
+        assertThat(response.getUpiPayload()).isEqualTo(response.getUpiString());
+    }
+
+    @Test
+    @DisplayName("processWebhook - should confirm order and record UPI payment method")
+    void processWebhook_shouldConfirmOrder_forUpiPayment() {
+        testOrder.setPaymentMethod("UPI");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PaymentWebhookRequestDTO webhook = PaymentWebhookRequestDTO.builder()
+                .orderId(1L)
+                .paymentIntentId("upi_sec123")
+                .eventType("payment_intent.succeeded")
+                .build();
+
+        boolean processed = paymentService.processWebhook(webhook);
+
+        assertThat(processed).isTrue();
+        assertThat(testOrder.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(testOrder.getPaymentMethod()).contains("UPI");
+        verify(orderEventService, times(1)).publishOrderEvent(eq(1L), any(OrderResponseDTO.class));
+    }
 }

@@ -105,4 +105,34 @@ class OrderServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Cannot cancel a delivered order");
     }
+
+    @Test
+    @DisplayName("placeOrder - should include bespoke customization options and adjust total amount")
+    void placeOrder_shouldIncludeBespokeCustomizationPrice() {
+        when(carRepository.findById(1L)).thenReturn(Optional.of(testCar));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(2L);
+            return o;
+        });
+
+        OrderRequestDTO dto = OrderRequestDTO.builder()
+                .carId(1L).quantity(1)
+                .customerName("Ankit").customerEmail("a@x.com")
+                .customerPhone("9876543210")
+                .deliveryAddress("123 Street").deliveryCity("Mumbai").deliveryPincode("400001")
+                .paymentMethod("UPI")
+                .customOptions("21\" Forged Monoblock Wheels, Carbon Ceramic Brakes")
+                .customPrice(new BigDecimal("1500000.00"))
+                .build();
+
+        OrderResponseDTO result = orderService.placeOrder(dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getUnitPrice()).isEqualByComparingTo("28500000");
+        assertThat(result.getCustomPrice()).isEqualByComparingTo("1500000.00");
+        assertThat(result.getCustomOptions()).isEqualTo("21\" Forged Monoblock Wheels, Carbon Ceramic Brakes");
+        // Total should be 28500000 + 1500000 = 30000000
+        assertThat(result.getTotalAmount()).isEqualByComparingTo("30000000.00");
+    }
 }

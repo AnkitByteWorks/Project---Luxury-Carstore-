@@ -84,9 +84,11 @@ public class OrderService {
         // 1. Find the car (or fail with 404)
         Car car = carRepository.findById(dto.getCarId())
                 .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + dto.getCarId()));
-        // 2. Compute total = price × quantity
-        BigDecimal total = car.getPrice()
+        // 2. Compute total = (price × quantity) + customPrice (if bespoke options selected)
+        BigDecimal baseTotal = car.getPrice()
                 .multiply(BigDecimal.valueOf(dto.getQuantity()));
+        BigDecimal customPrice = dto.getCustomPrice() != null ? dto.getCustomPrice() : BigDecimal.ZERO;
+        BigDecimal total = baseTotal.add(customPrice);
 
         // 3. Build the order entity
         Order order = Order.builder()
@@ -95,6 +97,8 @@ public class OrderService {
                 .unitPrice(car.getPrice())        // snapshot at order time
                 .quantity(dto.getQuantity())
                 .totalAmount(total)
+                .customOptions(dto.getCustomOptions())
+                .customPrice(dto.getCustomPrice())
                 .customerName(dto.getCustomerName())
                 .customerEmail(dto.getCustomerEmail())
                 .customerPhone(dto.getCustomerPhone())

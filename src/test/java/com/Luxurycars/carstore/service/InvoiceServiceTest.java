@@ -121,4 +121,24 @@ class InvoiceServiceTest {
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("You are not authorized");
     }
+
+    @Test
+    @DisplayName("generateInvoicePdf - should generate PDF with Bespoke Customization Spec line item")
+    void generateInvoicePdf_shouldGeneratePdfWithBespokeSpec() {
+        testOrder.setCustomOptions("21\" Forged Monoblock Wheels, Carbon Ceramic Brakes");
+        testOrder.setCustomPrice(new BigDecimal("2500000.00"));
+        testOrder.setTotalAmount(testOrder.getUnitPrice().add(testOrder.getCustomPrice()));
+
+        when(orderRepository.findById(101L)).thenReturn(Optional.of(testOrder));
+        when(carRepository.findById(5L)).thenReturn(Optional.of(testCar));
+
+        Authentication adminAuth = new UsernamePasswordAuthenticationToken(
+                "admin", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+        byte[] pdfBytes = invoiceService.generateInvoicePdf(101L, adminAuth);
+
+        assertThat(pdfBytes).isNotNull();
+        assertThat(pdfBytes.length).isGreaterThan(100);
+        assertThat(new String(pdfBytes, 0, 5)).isEqualTo("%PDF-");
+    }
 }

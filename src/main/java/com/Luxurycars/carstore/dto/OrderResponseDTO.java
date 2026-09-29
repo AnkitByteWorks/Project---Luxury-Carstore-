@@ -40,6 +40,10 @@ public class OrderResponseDTO {
     private String paymentMethod;
     private OrderStatus status;
 
+    // Bespoke Options
+    private String customOptions;
+    private BigDecimal customPrice;
+
     // Timestamps
     private LocalDateTime orderedAt;
     private LocalDateTime updatedAt;

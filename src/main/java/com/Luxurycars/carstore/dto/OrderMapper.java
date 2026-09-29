@@ -21,6 +21,8 @@ public class OrderMapper {
                 .deliveryPincode(order.getDeliveryPincode())
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
+                .customOptions(order.getCustomOptions())
+                .customPrice(order.getCustomPrice())
                 .orderedAt(order.getOrderedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

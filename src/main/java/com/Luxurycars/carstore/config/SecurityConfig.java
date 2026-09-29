@@ -118,13 +118,18 @@ public class SecurityConfig {
                         // Public — Actuator Health & Metrics
                         .requestMatchers("/actuator/**").permitAll()
 
-                        // Public — Payment Webhook Callback
+                        // Live Hypercar Auctions (Active lots, live SSE bid streams, bid submissions)
+                        .requestMatchers("/api/auctions/**").permitAll()
+
+                        // Public — Payment Webhook Callback & Intent Creation
                         .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
+                        .requestMatchers("/api/payments/intent/**").permitAll()
+                        .requestMatchers("/api/payments/create-intent").permitAll()
 
                         // Any logged-in user — order endpoints
                         .requestMatchers("/api/orders/**").authenticated()
 
-                        // Payment intent creation
+                        // Payment endpoints
                         .requestMatchers("/api/payments/**").authenticated()
 
                         // Everything else needs authentication

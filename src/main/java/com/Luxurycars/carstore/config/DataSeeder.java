@@ -26,12 +26,17 @@ public class DataSeeder implements CommandLineRunner {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository;
 
     @Autowired
-    public DataSeeder(CarRepository carRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataSeeder(CarRepository carRepository,
+                      UserRepository userRepository,
+                      PasswordEncoder passwordEncoder,
+                      @Autowired(required = false) com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository) {
         this.carRepository = carRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auctionLotRepository = auctionLotRepository;
     }
 
     @Override
@@ -50,6 +55,53 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(admin);
             log.info("✅ Created default admin: username=admin, password=admin123");
         }
+
+        // ─── Seed live auction lots ───
+        if (auctionLotRepository != null && auctionLotRepository.count() == 0) {
+            log.info("🏁 Seeding live hypercar auction lots...");
+            var now = java.time.LocalDateTime.now();
+            List<com.Luxurycars.carstore.entity.AuctionLot> lots = List.of(
+                    com.Luxurycars.carstore.entity.AuctionLot.builder()
+                            .title("2024 Pagani Huayra R - Chassis #07 Arte Italiana")
+                            .description("6.0L naturally aspirated V12 producing 850 HP, weighing only 1,050 kg. Bespoke titanium exhaust.")
+                            .imageUrl("https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80")
+                            .startingBid(new BigDecimal("280000000.00"))
+                            .currentBid(new BigDecimal("295000000.00"))
+                            .reservePrice(new BigDecimal("320000000.00"))
+                            .minIncrement(new BigDecimal("500000.00"))
+                            .reserveMet(false)
+                            .active(true)
+                            .lotEndsAt(now.plusDays(2).plusHours(4))
+                            .build(),
+                    com.Luxurycars.carstore.entity.AuctionLot.builder()
+                            .title("2023 Bugatti Bolide - 1,825 HP Track Weapon")
+                            .description("W16 quad-turbo engine, carbon-fiber monocoque. One of only 40 worldwide.")
+                            .imageUrl("https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?auto=format&fit=crop&w=1200&q=80")
+                            .startingBid(new BigDecimal("350000000.00"))
+                            .currentBid(new BigDecimal("380000000.00"))
+                            .reservePrice(new BigDecimal("370000000.00"))
+                            .minIncrement(new BigDecimal("1000000.00"))
+                            .reserveMet(true)
+                            .active(true)
+                            .lotEndsAt(now.plusHours(18).plusMinutes(30))
+                            .build(),
+                    com.Luxurycars.carstore.entity.AuctionLot.builder()
+                            .title("2024 Ferrari Daytona SP3 - Icona Series")
+                            .description("Naturally aspirated 6.5L V12 screaming to 9,500 RPM with 829 HP in Rosso Magma.")
+                            .imageUrl("https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=1200&q=80")
+                            .startingBid(new BigDecimal("220000000.00"))
+                            .currentBid(new BigDecimal("240000000.00"))
+                            .reservePrice(new BigDecimal("230000000.00"))
+                            .minIncrement(new BigDecimal("500000.00"))
+                            .reserveMet(true)
+                            .active(true)
+                            .lotEndsAt(now.plusDays(1).plusHours(8))
+                            .build()
+            );
+            auctionLotRepository.saveAll(lots);
+            log.info("✅ Successfully seeded 3 hypercar auction lots!");
+        }
+
         if (carRepository.count() > 0) {
             log.info("✅ Cars already exist. Skipping seeding.");
             return;

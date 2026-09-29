@@ -33,4 +33,15 @@ public class PaymentIntentResponseDTO {
 
     @Schema(description = "Simulation checkout redirect link")
     private String checkoutUrl;
+
+    @Schema(description = "Payment method selected", example = "UPI")
+    private String paymentMethod;
+
+    @Schema(description = "Dynamic UPI payment URI string for QR code rendering",
+            example = "upi://pay?pa=carstore.bespoke@icici&pn=CarstoreVIP&am=400000000.00&tr=1&cu=INR")
+    private String upiString;
+
+    public String getUpiPayload() {
+        return upiString;
+    }
 }
