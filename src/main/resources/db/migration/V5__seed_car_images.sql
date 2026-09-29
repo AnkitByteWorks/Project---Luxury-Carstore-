@@ -2,8 +2,12 @@
 -- V5: Seed High-Resolution Luxury Car Images
 -- ═══════════════════════════════════════════════
 
--- Ensure image_url column exists in cars table
-ALTER TABLE cars ADD COLUMN image_url VARCHAR(1000);
+-- Ensure image_url column exists in cars table (idempotent for MySQL)
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = 'cars' AND table_schema = DATABASE() AND column_name = 'image_url');
+SET @alter_stmt = IF(@col_exists = 0, 'ALTER TABLE cars ADD COLUMN image_url VARCHAR(1000)', 'SELECT 1');
+PREPARE stmt_v5 FROM @alter_stmt;
+EXECUTE stmt_v5;
+DEALLOCATE PREPARE stmt_v5;
 
 -- Update all existing vehicles with ultra-high-resolution Unsplash/CDN images
 -- Note: In MySQL (utf8mb4), LIKE is case-insensitive, matching PostgreSQL's ILIKE specification:
