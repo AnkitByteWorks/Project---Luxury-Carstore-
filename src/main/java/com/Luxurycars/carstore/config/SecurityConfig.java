@@ -87,6 +87,9 @@ public class SecurityConfig {
                         // Public — auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // Public — Root & error
+                        .requestMatchers("/", "/error").permitAll()
+
                         // Public — Swagger UI + OpenAPI spec
                         .requestMatchers(
                                 "/swagger-ui/**",
