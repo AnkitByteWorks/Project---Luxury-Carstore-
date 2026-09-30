@@ -107,10 +107,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/cars/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/cars/**").hasRole("ADMIN")
 
-                        // VIP Test Drive Booking (Public creation + reference code check, admin management)
+                        // VIP Test Drive Booking (Public creation + reference code check + live tracking, admin management)
                         .requestMatchers(HttpMethod.POST, "/api/test-drives").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/test-drives/ref/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/test-drives/*/tracking").permitAll()
                         .requestMatchers("/api/test-drives/**").hasRole("ADMIN")
+
+                        // Public — Polyglot Analytics & 3D Telemetry (MongoDB)
+                        .requestMatchers("/api/analytics/**").permitAll()
 
                         // Admin-only order/admin operations
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

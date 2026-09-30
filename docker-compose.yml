@@ -39,6 +39,39 @@
         - carstore-network
 
     # ═══════════════════════════════════════════
+    #  MongoDB 7 (Polyglot Persistence / Telemetry)
+    # ═══════════════════════════════════════════
+    mongo:
+      image: mongo:7.0
+      container_name: carstore-mongo
+      restart: unless-stopped
+      ports:
+        - "27017:27017"
+      volumes:
+        - mongodb_data:/data/db
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
+    #  Mongo Express (Free Web UI Dashboard on :8081)
+    # ═══════════════════════════════════════════
+    mongo-express:
+      image: mongo-express:latest
+      container_name: carstore-mongo-express
+      restart: unless-stopped
+      ports:
+        - "8081:8081"
+      environment:
+        ME_CONFIG_MONGODB_SERVER: mongo
+        ME_CONFIG_MONGODB_PORT: 27017
+        ME_CONFIG_BASICAUTH_USERNAME: admin
+        ME_CONFIG_BASICAUTH_PASSWORD: pass
+      depends_on:
+        - mongo
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
     #  Spring Boot App (Java 25)
     # ═══════════════════════════════════════════
     carstore-app:
@@ -52,6 +85,8 @@
           condition: service_healthy
         redis:
           condition: service_started
+        mongo:
+          condition: service_started
       environment:
         SPRING_PROFILES_ACTIVE: prod
         DB_URL: jdbc:mysql://mysql:3306/luxury_cars_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -61,6 +96,7 @@
         JWT_EXPIRATION: 86400000
         REDIS_HOST: redis
         REDIS_PORT: 6379
+        SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/carstore_audit
         UPLOAD_DIR: /app/uploads/cars
         PORT: 8080
       ports:
@@ -73,6 +109,7 @@
   volumes:
     mysql_data:
     uploads_data:
+    mongodb_data:
 
   networks:
     carstore-network:

@@ -49,7 +49,13 @@ public class TestDriveController {
         return ResponseEntity.ok(testDriveService.getByReferenceCode(referenceCode));
     }
 
-    @Operation(summary = "Update test drive status (Admin only)", description = "Update the appointment status (PENDING, CONFIRMED, COMPLETED, CANCELLED)")
+    @Operation(summary = "Get Amazon-style VIP fulfillment tracking timeline", description = "Live timeline tracking with logistics, checkpoint, and concierge details")
+    @GetMapping("/{referenceCode}/tracking")
+    public ResponseEntity<com.Luxurycars.carstore.dto.TestDriveTrackingDTO> getTrackingTimeline(@PathVariable String referenceCode) {
+        return ResponseEntity.ok(testDriveService.getTrackingTimeline(referenceCode));
+    }
+
+    @Operation(summary = "Update test drive status (Admin only)", description = "Update the appointment status (PENDING, CONFIRMED, CONCIERGE_ASSIGNED, CARRIER_DISPATCHED, COMPLETED, CANCELLED)")
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TestDriveResponseDTO> updateStatus(

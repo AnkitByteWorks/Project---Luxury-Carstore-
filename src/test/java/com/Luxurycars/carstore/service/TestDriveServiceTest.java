@@ -170,4 +170,22 @@ class TestDriveServiceTest {
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
                 .hasMessageContaining("This VIP slot is already reserved or currently locked under high demand.");
     }
+
+    @Test
+    @DisplayName("getTrackingTimeline - should return Amazon-style timeline steps")
+    void getTrackingTimeline_shouldReturnSteps() {
+        when(testDriveRepository.findByReferenceCode("TD-2026-TESTREF1")).thenReturn(Optional.of(testDrive));
+        when(carRepository.findById(1L)).thenReturn(Optional.of(testCar));
+
+        com.Luxurycars.carstore.dto.TestDriveTrackingDTO timeline = testDriveService.getTrackingTimeline("TD-2026-TESTREF1");
+
+        assertThat(timeline).isNotNull();
+        assertThat(timeline.getReferenceCode()).isEqualTo("TD-2026-TESTREF1");
+        assertThat(timeline.getCurrentStep()).isEqualTo(1);
+        assertThat(timeline.getSteps()).hasSize(5);
+        assertThat(timeline.getSteps().get(0).getTitle()).isEqualTo("VIP Reservation Received");
+        assertThat(timeline.getSteps().get(0).isCompleted()).isTrue();
+        assertThat(timeline.getConcierge()).isNotNull();
+        assertThat(timeline.getLogistics()).isNotNull();
+    }
 }
