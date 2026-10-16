@@ -117,12 +117,18 @@ public class AuthService {
             throw new BadRequestException("Refresh token must not be null");
         }
 
-        // Validate key existence in Redis before rotating/issuing new tokens
+        // Validate key existence in Redis before rotating/issuing new tokens (if Redis is active and reachable)
         if (stringRedisTemplate != null) {
-            String redisKey = "refresh_token:" + dto.getRefreshToken();
-            Boolean exists = stringRedisTemplate.hasKey(redisKey);
-            if (!Boolean.TRUE.equals(exists)) {
-                throw new BadRequestException("Refresh token is invalid, expired, or has been revoked");
+            try {
+                String redisKey = "refresh_token:" + dto.getRefreshToken();
+                Boolean exists = stringRedisTemplate.hasKey(redisKey);
+                if (Boolean.FALSE.equals(exists)) {
+                    throw new BadRequestException("Refresh token is invalid, expired, or has been revoked");
+                }
+            } catch (BadRequestException e) {
+                throw e;
+            } catch (Exception ignored) {
+                // Redis is an optional cache layer; fall back to DB validation in RefreshTokenService
             }
         }
 
@@ -134,13 +140,17 @@ public class AuthService {
 
         // Update Redis token store: delete old token and store new rotated token
         if (stringRedisTemplate != null) {
-            stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
-            if (response.getRefreshToken() != null) {
-                stringRedisTemplate.opsForValue().set(
-                        "refresh_token:" + response.getRefreshToken(),
-                        String.valueOf(response.getUserId()),
-                        Duration.ofSeconds(604800)
-                );
+            try {
+                stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
+                if (response.getRefreshToken() != null) {
+                    stringRedisTemplate.opsForValue().set(
+                            "refresh_token:" + response.getRefreshToken(),
+                            String.valueOf(response.getUserId()),
+                            Duration.ofSeconds(604800)
+                    );
+                }
+            } catch (Exception ignored) {
+                // Fall back gracefully if Redis connection is not active
             }
         }
 
@@ -150,7 +160,11 @@ public class AuthService {
     public void logout(RefreshTokenRequestDTO dto) {
         if (dto != null && dto.getRefreshToken() != null) {
             if (stringRedisTemplate != null) {
-                stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
+                try {
+                    stringRedisTemplate.delete("refresh_token:" + dto.getRefreshToken());
+                } catch (Exception ignored) {
+                    // Fall back gracefully if Redis is offline
+                }
             }
             if (refreshTokenService != null) {
                 refreshTokenService.revokeToken(dto.getRefreshToken());
@@ -167,11 +181,15 @@ public class AuthService {
         if (refreshTokenService != null) {
             refreshToken = refreshTokenService.createRefreshToken(user).getToken();
             if (stringRedisTemplate != null && refreshToken != null) {
-                stringRedisTemplate.opsForValue().set(
-                        "refresh_token:" + refreshToken,
-                        String.valueOf(user.getId()),
-                        Duration.ofSeconds(604800)
-                );
+                try {
+                    stringRedisTemplate.opsForValue().set(
+                            "refresh_token:" + refreshToken,
+                            String.valueOf(user.getId()),
+                            Duration.ofSeconds(604800)
+                    );
+                } catch (Exception ignored) {
+                    // Redis is an optional cache; persistent token is safely stored in database
+                }
             }
         }
 

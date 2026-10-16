@@ -9,16 +9,16 @@
       container_name: carstore-mysql
       restart: unless-stopped
       environment:
-        MYSQL_ROOT_PASSWORD: rootpass
-        MYSQL_DATABASE: luxury_cars_db
-        MYSQL_USER: carstore_user
-        MYSQL_PASSWORD: carstore_pass
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+        MYSQL_DATABASE: ${MYSQL_DATABASE:-luxury_cars_db}
+        MYSQL_USER: ${DB_USERNAME:-carstore_user}
+        MYSQL_PASSWORD: ${DB_PASSWORD:-carstore_pass}
       ports:
         - "3307:3306"     # host port 3307 (avoid local MySQL conflict)
       volumes:
         - mysql_data:/var/lib/mysql
       healthcheck:
-        test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass" ]
+        test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD:-rootpass}"]
         interval: 10s
         timeout: 5s
         retries: 5
@@ -64,10 +64,57 @@
       environment:
         ME_CONFIG_MONGODB_SERVER: mongo
         ME_CONFIG_MONGODB_PORT: 27017
-        ME_CONFIG_BASICAUTH_USERNAME: admin
-        ME_CONFIG_BASICAUTH_PASSWORD: pass
+        ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
+        ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-pass}
       depends_on:
         - mongo
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
+    #  Apache Kafka (KRaft Mode - Ultra Fast, No Zookeeper)
+    # ═══════════════════════════════════════════
+    kafka:
+      image: apache/kafka:latest
+      container_name: carstore-kafka
+      restart: unless-stopped
+      ports:
+        - "9092:9092"
+        - "9094:9094"
+      environment:
+        KAFKA_NODE_ID: 1
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        KAFKA_NUM_PARTITIONS: 1
+        KAFKA_HEAP_OPTS: "-Xms128m -Xmx256m"
+      volumes:
+        - kafka_data:/var/lib/kafka/data
+      networks:
+        - carstore-network
+
+    # ═══════════════════════════════════════════
+    #  Kafka UI (Visual Web Dashboard on :8085)
+    # ═══════════════════════════════════════════
+    kafka-ui:
+      image: provectuslabs/kafka-ui:latest
+      container_name: carstore-kafka-ui
+      restart: unless-stopped
+      ports:
+        - "8085:8080"
+      environment:
+        KAFKA_CLUSTERS_0_NAME: carstore-cluster
+        KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+        JAVA_OPTS: "-Xms64m -Xmx128m"
+      depends_on:
+        - kafka
       networks:
         - carstore-network
 
@@ -87,16 +134,20 @@
           condition: service_started
         mongo:
           condition: service_started
+        kafka:
+          condition: service_started
       environment:
         SPRING_PROFILES_ACTIVE: prod
-        DB_URL: jdbc:mysql://mysql:3306/luxury_cars_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-        DB_USERNAME: carstore_user
-        DB_PASSWORD: carstore_pass
-        JWT_SECRET: ThisIsAVeryLongSecretKeyForJwtSigningMustBeAtLeast32BytesLongForHS256!
-        JWT_EXPIRATION: 86400000
+        DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-luxury_cars_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+        DB_USERNAME: ${DB_USERNAME:-carstore_user}
+        DB_PASSWORD: ${DB_PASSWORD:-carstore_pass}
+        JWT_SECRET: ${JWT_SECRET:-DevLocalDockerJwtSecretKeyMustBeAtLeast32BytesLongForHS256!}
+        JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+        ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-}
         REDIS_HOST: redis
         REDIS_PORT: 6379
         SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/carstore_audit
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
         UPLOAD_DIR: /app/uploads/cars
         PORT: 8080
       ports:
@@ -110,6 +161,7 @@
     mysql_data:
     uploads_data:
     mongodb_data:
+    kafka_data:
 
   networks:
     carstore-network:

@@ -27,6 +27,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -94,7 +95,7 @@ class AuditTelemetryControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /api/analytics/customer-audit - should return recent audit logs")
     void getRecentAuditLogs_shouldReturnList() throws Exception {
         CustomerAuditLog logEntry = CustomerAuditLog.builder()
@@ -106,7 +107,8 @@ class AuditTelemetryControllerTest {
 
         when(customerAuditLogRepository.findTop20ByOrderByTimestampDesc()).thenReturn(List.of(logEntry));
 
-        mockMvc.perform(get("/api/analytics/customer-audit"))
+        mockMvc.perform(get("/api/analytics/customer-audit")
+                        .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("log-1"))
                 .andExpect(jsonPath("$[0].customerName").value("Bruce Wayne"));
@@ -126,7 +128,8 @@ class AuditTelemetryControllerTest {
 
         when(vehicleTelemetryLogRepository.findByOrderIdOrderByRecordedAtDesc(101L)).thenReturn(List.of(telemetry));
 
-        mockMvc.perform(get("/api/analytics/telemetry/101"))
+        mockMvc.perform(get("/api/analytics/telemetry/101")
+                        .with(user("customer").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].orderId").value(101))
                 .andExpect(jsonPath("$[0].speedKmH").value(140.5));

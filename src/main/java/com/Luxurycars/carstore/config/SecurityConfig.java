@@ -113,34 +113,40 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/test-drives/*/tracking").permitAll()
                         .requestMatchers("/api/test-drives/**").hasRole("ADMIN")
 
-                        // Public — Polyglot Analytics & 3D Telemetry (MongoDB)
-                        .requestMatchers("/api/analytics/**").permitAll()
+                        // Analytics & Polyglot Telemetry (MongoDB):
+                        // Anonymous interaction/clickstream recording is public for showroom 3D visitors;
+                        // Sensitive customer audit logs require ADMIN role.
+                        .requestMatchers(HttpMethod.POST, "/api/analytics/interaction").permitAll()
+                        .requestMatchers("/api/analytics/customer-audit").hasRole("ADMIN")
+                        .requestMatchers("/api/analytics/**").authenticated()
 
-                        // Admin-only order/admin operations
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Live Hypercar Auctions:
+                        // Browsing active lots, inspecting lot details, and live SSE event streams are public.
+                        // Submitting bids requires authenticated collector identity.
+                        .requestMatchers(HttpMethod.GET, "/api/auctions/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auctions/*/bid").authenticated()
+                        .requestMatchers("/api/auctions/**").hasRole("ADMIN")
 
-                        // Public — Actuator Health & Metrics
-                        .requestMatchers("/actuator/**").permitAll()
+                        // Secret Vault & VIP Allocations:
+                        // Passcode verification endpoint is public gate; accessing allocations and inquiries require authenticated session.
+                        .requestMatchers(HttpMethod.POST, "/api/vault/verify-passcode").permitAll()
+                        .requestMatchers("/api/vault/**").authenticated()
 
-                        // Live Hypercar Auctions (Active lots, live SSE bid streams, bid submissions)
-                        .requestMatchers("/api/auctions/**").permitAll()
-
-                        // Secret Vault & VIP Allocations (Passcode verify, slots, inquiries)
-                        .requestMatchers("/api/vault/**").permitAll()
-
-                        // Public — Payment Webhook Callback & Intent Creation
+                        // Payments:
+                        // Public gateway webhook callbacks; payment intent initialization requires authenticated session.
                         .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
-                        .requestMatchers("/api/payments/intent/**").permitAll()
-                        .requestMatchers("/api/payments/create-intent").permitAll()
+                        .requestMatchers("/api/payments/**").authenticated()
 
-                        // Public — White-Glove Enclosed Carrier GPS Telemetry Tracking
+                        // Orders:
+                        // Public carrier GPS tracking by tracking link; order management requires authentication.
                         .requestMatchers(HttpMethod.GET, "/api/orders/*/carrier-telemetry").permitAll()
-
-                        // Any logged-in user — order endpoints
                         .requestMatchers("/api/orders/**").authenticated()
 
-                        // Payment endpoints
-                        .requestMatchers("/api/payments/**").authenticated()
+                        // Administrative & Infrastructure Monitoring
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/kafka/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
 
                         // Everything else needs authentication
                         .anyRequest().authenticated()

@@ -24,6 +24,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import org.springframework.security.test.context.support.WithMockUser;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -88,6 +91,7 @@ class AuctionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "collector", roles = {"USER"})
     @DisplayName("POST /api/auctions/{lotId}/bid - should accept valid bid and return high bid update")
     void placeBid_shouldReturnUpdatedBid() throws Exception {
         BidResponseDTO bidResponse = BidResponseDTO.builder()
@@ -111,6 +115,7 @@ class AuctionControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/auctions/1/bid")
+                        .with(user("collector").roles("USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

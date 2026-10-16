@@ -11,6 +11,8 @@ import com.Luxurycars.carstore.entity.Order;
 import com.Luxurycars.carstore.entity.OrderStatus;
 import com.Luxurycars.carstore.repository.CarRepository;
 import com.Luxurycars.carstore.repository.OrderRepository;
+import com.Luxurycars.carstore.kafka.CarstoreKafkaProducer;
+import com.Luxurycars.carstore.kafka.dto.OrderPlacedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,28 +33,31 @@ public class OrderService {
     private final OrderEventService orderEventService;
     private final EmailNotificationService emailNotificationService;
     private final InvoiceService invoiceService;
+    private final CarstoreKafkaProducer kafkaProducer;
 
     @Autowired
     public OrderService(OrderRepository orderRepository,
                         CarRepository carRepository,
                         @Autowired(required = false) OrderEventService orderEventService,
                         @Autowired(required = false) EmailNotificationService emailNotificationService,
-                        @Autowired(required = false) InvoiceService invoiceService) {
+                        @Autowired(required = false) InvoiceService invoiceService,
+                        @Autowired(required = false) CarstoreKafkaProducer kafkaProducer) {
         this.orderRepository = orderRepository;
         this.carRepository = carRepository;
         this.orderEventService = orderEventService;
         this.emailNotificationService = emailNotificationService;
         this.invoiceService = invoiceService;
+        this.kafkaProducer = kafkaProducer;
     }
 
     public OrderService(OrderRepository orderRepository,
                         CarRepository carRepository,
                         OrderEventService orderEventService) {
-        this(orderRepository, carRepository, orderEventService, null, null);
+        this(orderRepository, carRepository, orderEventService, null, null, null);
     }
 
     public OrderService(OrderRepository orderRepository, CarRepository carRepository) {
-        this(orderRepository, carRepository, null, null, null);
+        this(orderRepository, carRepository, null, null, null, null);
     }
 
     public OrderStatsDTO getStats() {
@@ -124,6 +129,31 @@ public class OrderService {
                 } catch (Exception ignored) {}
             }
             emailNotificationService.sendOrderConfirmationEmail(saved, invoicePdf);
+        }
+
+        // 6. Asynchronously publish event to Apache Kafka for decoupled microservices processing
+        if (kafkaProducer != null) {
+            try {
+                OrderPlacedEvent event = OrderPlacedEvent.builder()
+                        .orderId(saved.getId())
+                        .carId(car.getId())
+                        .carName(car.getName())
+                        .brand(car.getBrand())
+                        .customerName(saved.getCustomerName())
+                        .customerEmail(saved.getCustomerEmail())
+                        .customerPhone(saved.getCustomerPhone())
+                        .deliveryCity(saved.getDeliveryCity())
+                        .totalAmount(saved.getTotalAmount())
+                        .monogramText(saved.getMonogramText())
+                        .monogramColor(saved.getMonogramColor())
+                        .paymentMethod(saved.getPaymentMethod())
+                        .timestamp(LocalDateTime.now().toString())
+                        .eventType("ORDER_PLACED")
+                        .build();
+                kafkaProducer.sendOrderPlacedEvent(event);
+            } catch (Exception ignored) {
+                // Graceful resilience: Kafka failures never block order placement
+            }
         }
 
         return OrderMapper.toResponseDTO(saved);

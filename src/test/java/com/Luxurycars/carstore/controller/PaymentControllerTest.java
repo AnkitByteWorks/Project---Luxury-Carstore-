@@ -18,6 +18,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -58,6 +60,7 @@ class PaymentControllerTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @Test
+    @WithMockUser
     @DisplayName("POST /api/payments/intent/{orderId} - should create intent with UPI QR code string")
     void createIntentForOrder_shouldSupportUpi() throws Exception {
         String expectedUpi = "upi://pay?pa=carstore.bespoke@icici&pn=CarstoreVIP&am=400000000.00&tr=1&cu=INR";
@@ -74,6 +77,7 @@ class PaymentControllerTest {
         when(paymentService.createPaymentIntent(eq(1L), eq("UPI"))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/api/payments/intent/1")
+                        .with(user("customer").roles("USER"))
                         .param("paymentMethod", "UPI"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(1))

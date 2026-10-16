@@ -21,6 +21,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,6 +32,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -109,6 +111,7 @@ class VaultControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "VIP-CLIENT-CENTURION", roles = {"USER", "VIP"})
     @DisplayName("GET /api/vault/allocations - Returns allocations list")
     void shouldReturnAllocationsList() throws Exception {
         VaultAllocation allocation = VaultAllocation.builder()
@@ -127,13 +130,15 @@ class VaultControllerTest {
 
         when(vaultService.getAllocations()).thenReturn(List.of(allocation));
 
-        mockMvc.perform(get("/api/vault/allocations"))
+        mockMvc.perform(get("/api/vault/allocations")
+                        .with(user("VIP-CLIENT-CENTURION").roles("USER", "VIP")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("v-01"))
                 .andExpect(jsonPath("$[0].name").value("Pagani Huayra R"));
     }
 
     @Test
+    @WithMockUser(username = "VIP-CLIENT-CENTURION", roles = {"USER", "VIP"})
     @DisplayName("POST /api/vault/inquire - Submits confidential request")
     void shouldSubmitInquiry() throws Exception {
         VaultInquiryRequestDTO request = VaultInquiryRequestDTO.builder()
@@ -154,6 +159,7 @@ class VaultControllerTest {
         when(vaultService.submitInquiry(any(VaultInquiryRequestDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/vault/inquire")
+                        .with(user("VIP-CLIENT-CENTURION").roles("USER", "VIP"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())

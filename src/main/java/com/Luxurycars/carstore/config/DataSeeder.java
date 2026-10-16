@@ -29,6 +29,12 @@ public class DataSeeder implements CommandLineRunner {
     private final com.Luxurycars.carstore.repository.AuctionLotRepository auctionLotRepository;
     private final com.Luxurycars.carstore.repository.VaultAllocationRepository vaultAllocationRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.admin.default-password:}")
+    private String defaultAdminPassword;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
     @Autowired
     public DataSeeder(CarRepository carRepository,
                       UserRepository userRepository,
@@ -47,16 +53,25 @@ public class DataSeeder implements CommandLineRunner {
         // Skip if DB already has cars (so we don't duplicate on every restart)
         // ─── Seed an admin user ───
         if (!userRepository.existsByUsername("admin")) {
+            String initialPassword;
+            if (defaultAdminPassword != null && !defaultAdminPassword.isBlank()) {
+                initialPassword = defaultAdminPassword.trim();
+            } else if ("prod".equalsIgnoreCase(activeProfile)) {
+                initialPassword = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            } else {
+                initialPassword = "admin123";
+            }
+
             AppUser admin = AppUser.builder()
                     .username("admin")
                     .email("admin@luxurycars.com")
-                    .password(passwordEncoder.encode("admin123"))
+                    .password(passwordEncoder.encode(initialPassword))
                     .fullName("System Admin")
                     .roles(Set.of(Role.ADMIN, Role.USER))
                     .enabled(true)
                     .build();
             userRepository.save(admin);
-            log.info("✅ Created default admin: username=admin, password=admin123");
+            log.info("✅ Initialized administrative user: username=admin (Password managed via environment variable)");
         }
 
         // ─── Seed live auction lots ───
